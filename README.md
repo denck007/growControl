@@ -5,3 +5,7 @@ Grow Control is an experiment with a raspberry pi to control an indoor vegtable 
 
 The initial goal is to control a light with a few tempature sensors and fans.
 Future goals include automated watering, pH testing, and possibly control for hydroponics.
+
+Dependencies: 
+*Adafruit_DHT: Must be included in your sys.path
+

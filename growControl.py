@@ -1,6 +1,8 @@
 #this file defines the objects and functions for the grow control program
 
 def readStatus(devices):
+#read the status of the devices
+#devices must have the self.update() method
 	for deviceGrp in range(len(devices)):
 		#print "readStatus - deviceGrp: " + str(deviceGrp)
 		for device in range(len(devices[deviceGrp])):
@@ -15,10 +17,9 @@ def deviceControl(devices):
 			devices[deviceGrp][device].control(devices,control)
 	
 	
-def writeStatus(devices,fileName):
+def writeStatus(devices,fileName,theTime):
 # this function goes over all the devices and writes their status to the output file.
 # expects a list of lists of devices, each device must have the method returnStatusString()
-
 	statusOut = "" 
 	for deviceGrp in range(len(devices)): #loop over each device group
 		for device in range(len(devices[deviceGrp])): # loop over each device in the group
@@ -46,6 +47,43 @@ def initFile(devices,fileName):
 	outFile.close() #close the file
 	
 	
+def getDateTime(d,t):
+	#returns the date and or time
+	# if date ==1 return the date
+	# if time ==1 return the time 
+	# if both return both in YYYY-MM-DD-HHMM format
+	# if neither, return blank string
+	from time import localtime, strftime
+	
+	date = strftime("%Y",localtime())+ "-" +strftime("%m",localtime())+ "-" +strftime("%d",localtime())
+	time = strftime("%H",localtime())+strftime("%M",localtime())
+	if d>1 or d<0 or t>1 or t<0:
+		return "Error in passing time values: Value out of input range"
+	if d and t:
+		return date + "-" + time
+	elif(d):
+		return date	
+	elif t:
+		return time
+	else:
+		return ""
+	
+	
+	
+	
+##########	
+#Class Defintions
+##########	
+# Generic Class Notes:
+## ids
+### should be in order with no id being used twice.
+#
+## returnStatusString()
+### must return a string
+### data format must match self.reportItemHeaders for csv file to make any sense
+### if more that 2 data points are to be returned, then they must be separated by a comma
+### do not include a comma at the start or end of the string
+### data validation should be done here
 class light:
 	def __init__(self,lightNumber,pin,timeOn,timeOff,fans,tempS):
 		##########
@@ -81,10 +119,6 @@ class light:
 		
 	
 	def returnStatusString(self):
-		# return what ever data we want to output here
-		# all data validation should be done here
-		# order must be the same as self.reportItemHeaders
-		
 		if self.status == 1:
 			return "On"
 		else:
@@ -93,6 +127,7 @@ class light:
 			
 	def control(self, devices, configControl):
 		print "In light[" + str(self.id) + "].control"
+
 	
 	
 class fan:
@@ -122,18 +157,12 @@ class fan:
 		print "In fan[" + str(self.id) + "].control"
 
 	def returnStatusString(self):
-		# return what ever data we want to output here
-		# all data validation should be done here
-		# order must be the same as self.reportItemHeaders
-		
 		if self.status == 1:
 			return "On"
 		else:
 			return "Off"
 			
 		
-	
-	
 class tempSensor:
 	def __init__(self,sensorNumber,pin,sensorType):
 		##########
@@ -157,14 +186,9 @@ class tempSensor:
 		print "In tempSensor[" + str(self.id) + "].update()"
 	
 	def returnStatusString(self):
-		# return what ever data we want to output here
-		# all data validation should be done here
-		# order must be the same as self.reportItemHeaders
-		
 		return str(self.lastTemp) + "," + str(self.lastHumd)
 		
 		
-
 class control:
 #all the control variables go here
 	def __init__(self,maxTemp,minTemp,recordInterval):

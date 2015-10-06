@@ -1,9 +1,10 @@
 # This is the main file for growControl
 
-
+import sys
+sys.path.append("C:\\Users\\Neil\\Documents\\GitHub\\Adafruit_Python_DHT")
 import Adafruit_DHT
 import growControl as gc
-import time
+from time import localtime, strftime
 
 # hard code this for now
 #initialize the setup
@@ -31,10 +32,7 @@ control = gc.control(30,15,2)
 outFileName = ("test1.csv")
 
 
-
-
 #between inputDevices and setableDevices, everything that is going to be communicated with must be listed
-
 #create a list of all the sensors that are inputs, things that we can read from, sensors
 #these are things that we can monitor: temp, humidity,
 #something like a photo sensor would fall under here
@@ -52,6 +50,7 @@ on = 1
 #write the file headers
 gc.initFile(inputDevices+setableDevices,outFileName)
 while on:
+	localTime = strftime("%Y",localtime())+ "-" +strftime("%m",localtime())+ "-" +strftime("%d",localtime())+ "-" + strftime("%H",localtime())+strftime("%M",localtime())
 	gc.readStatus(inputDevices)
 	gc.deviceControl(setableDevices)
 	gc.writeStatus(inputDevices+setableDevices,outFileName)
