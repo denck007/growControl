@@ -20,11 +20,11 @@ def deviceControl(devices):
 def writeStatus(devices,fileName,theTime):
 # this function goes over all the devices and writes their status to the output file.
 # expects a list of lists of devices, each device must have the method returnStatusString()
-	statusOut = theTime 
+	statusOut = theTime + "," #start each line with the date/time
 	for deviceGrp in range(len(devices)): #loop over each device group
 		for device in range(len(devices[deviceGrp])): # loop over each device in the group
-			print "writeStatus - deviceGrp: " + str(deviceGrp) + "  device: " + str(device) #debug
-			print str(devices[deviceGrp][device].growType)
+			#print "writeStatus - deviceGrp: " + str(deviceGrp) + "  device: " + str(device) #debug
+			#print str(devices[deviceGrp][device].growType)
 			statusOut=statusOut + devices[deviceGrp][device].returnStatusString() + "," # add the status to the string
 	
 	
@@ -36,7 +36,7 @@ def writeStatus(devices,fileName,theTime):
 def initFile(devices,fileName):
 # This function reads in the headers defined in the object definition for the column headers
 # writes device.reportItemHeaders() to the given file
-	headersOut = "Date and Time:"
+	headersOut = "Date and Time (YYYY-MM-DD-HH:MM:SS):,"
 	for deviceGrp in range(len(devices)): #loop over each device group
 		for device in range(len(devices[deviceGrp])): # loop over each device in the group
 			headersOut=headersOut + devices[deviceGrp][device].reportItemHeaders + "," # add the status to the string
@@ -51,12 +51,12 @@ def getDateTime(d,t):
 	#returns the date and or time
 	# if date ==1 return the date
 	# if time ==1 return the time 
-	# if both return both in YYYY-MM-DD-HHMM format
+	# if both return both in YYYY-MM-DD-HH:MM:SS format
 	# if neither, return blank string
 	from time import localtime, strftime
 	
 	date = strftime("%Y",localtime())+ "-" +strftime("%m",localtime())+ "-" +strftime("%d",localtime())
-	time = strftime("%H",localtime())+strftime("%M",localtime())
+	time = strftime("%H",localtime())+":"+strftime("%M",localtime())+":"+strftime("%S",localtime())
 	if d>1 or d<0 or t>1 or t<0:
 		return "Error in passing time values: Value out of input range"
 	if d and t:
@@ -187,38 +187,26 @@ class tempSensor:
 		self.pin = pin #GPIO pin used
 		self.lastTemp = -9999 #set to the last measured temperature, init at impossible value, value in C
 		self.lastHumd = -9999 #set the the last measured humidity, init at impossible value, value in %
+		self.sensorType = sensorType
 		self.sensorLibrary = sensorLibrary #library that is called to read the sensor, needed for Adafruit stuff
 		self.iteratationsToVal = -9999
 		##########
 		#hard coded but configurable in source code
 		##########
-		self.reportItemHeaders = "Temp Sensor:" + str(self.id) + "  On Pin:" + str(self.pin) + "," + "Humidity Sensor:" + str(self.id) + "  On Pin:" + str(self.pin) + "," + "Iterations to Get a Value:"
+		self.reportItemHeaders = "Temp Sensor:" + str(self.id) + "  On Pin:" + str(self.pin) + "," + "Humidity Sensor:" + str(self.id) + "  On Pin:" + str(self.pin) + "," + "Iterations to Get a Value on Pin:" + str(self.pin)
 		self.growType = "tempSensor" #debugging
 		self.retries = 5 # number of times to attempt to read before giving update
-		self.retriesPause = 0.5 # time to wait between retries, in seconds
+		self.retriesPause = 10 # time to wait between retries, in seconds
 		
-		##########
-		#check for the sensor type
-		##########
-		if sensorType == "DHT22":
-			self.sensorType = sensorLibrary.DHT22
-		elif sensorType == "X":
-			print 'This is only a test case'
-			self.sensorType = -9999
-		else:
-			print("Error reading in temp sensor type. This should cause an exception")
-			
-			
-
 
 	def update(self):
-		print "In tempSensor[" + str(self.id) + "].update()"
+		#print "In tempSensor[" + str(self.id) + "].update()" #debug
 		#if statement so other sensors can be easily added
 		#only including the 22 here because that is all I have to test
-		if self.sensorType == self.sensorLibrary.DHT22:
+		if self.sensorType == "DHT22":
 			#read in the sensor
 			for ii in range(self.retries):
-				humidity, temperature = self.sensorLibrary.read(self.sensorType, self.pin)
+				humidity, temperature = self.sensorLibrary.read(22, self.pin) ## 22 is what Adafruit_DHT.DHT22 returns in example .\Adafruit_Python_DHT\examples\AdafruitDHT.py
 				if humidity is not None and temperature is not None:
 					self.lastTemp = temperature
 					self.lastHumd = humidity
@@ -229,6 +217,17 @@ class tempSensor:
 				self.iteratationsToVal = -9999
 				print 'Failed to get reading'
 		
+		elif self.sensorType == "test": #test case
+			from random import randint as rand
+			self.lastTemp = rand(0,25)
+			self.lastHumd = rand(0,100)
+			self.iteratationsToVal = "This is only a test"
+			print "leaving Test"
+
+		else:
+			print("Error reading in temp sensor type. This should cause an exception")
+			
+
 	def returnStatusString(self):
 		return str(self.lastTemp) + "," + str(self.lastHumd) + "," + str(self.iteratationsToVal)
 		
