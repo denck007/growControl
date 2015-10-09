@@ -2,6 +2,7 @@
 
 import sys
 sys.path.append("C:\\Users\\Neil\\Documents\\GitHub\\Adafruit_Python_DHT")
+sys.path.append("~/git/Adafruit/~/git/Adafruit_Python_DHT")
 import Adafruit_DHT
 import growControl as gc
 from time import localtime, strftime
@@ -9,17 +10,15 @@ from time import localtime, strftime
 # hard code this for now
 #initialize the setup
 lights = []
-lights.append(gc.light(0,17,0700,1900,[0,1],[0,1]))
+#lights.append(gc.light(0,17,0700,1900,[0,1],[0,1]))
 
 fans = []
-fans.append(gc.fan(0,27,1))
-fans.append(gc.fan(1,22,2))
-
-
+#fans.append(gc.fan(0,27,1))
+#fans.append(gc.fan(1,22,2))
 
 tempSensors = []
-tempSensors.append(gc.tempSensor(0,5,"DHT22"))
-tempSensors.append(gc.tempSensor(1,6,"DHT22"))
+tempSensors.append(gc.tempSensor(0,2,"DHT22",Adafruit_DHT))
+#tempSensors.append(gc.tempSensor(1,6,"DHT22",Adafruit_DHT))
 
 
 
@@ -50,8 +49,7 @@ on = 1
 #write the file headers
 gc.initFile(inputDevices+setableDevices,outFileName)
 while on:
-	localTime = strftime("%Y",localtime())+ "-" +strftime("%m",localtime())+ "-" +strftime("%d",localtime())+ "-" + strftime("%H",localtime())+strftime("%M",localtime())
 	gc.readStatus(inputDevices)
 	gc.deviceControl(setableDevices)
 	gc.writeStatus(inputDevices+setableDevices,outFileName,gc.getDateTime(1,1))
-	time.sleep(control.recordInterval)
+	sleep(control.recordInterval)

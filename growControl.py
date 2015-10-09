@@ -185,15 +185,17 @@ class tempSensor:
 		##########
 		self.id = sensorNumber #number of the sensor, index starts at 0
 		self.pin = pin #GPIO pin used
-		self.lastTemp = -9999 #set to the last measured tempature, init at impossible value, value in C
+		self.lastTemp = -9999 #set to the last measured temperature, init at impossible value, value in C
 		self.lastHumd = -9999 #set the the last measured humidity, init at impossible value, value in %
 		self.sensorLibrary = sensorLibrary #library that is called to read the sensor, needed for Adafruit stuff
-	
+		self.iteratationsToVal = -9999
 		##########
 		#hard coded but configurable in source code
 		##########
-		self.reportItemHeaders = "Temp Sensor:" + str(self.id) + "  On Pin:" + str(self.pin) + "," + "Humidity Sensor:" + str(self.id) + "  On Pin:" + str(self.pin)
+		self.reportItemHeaders = "Temp Sensor:" + str(self.id) + "  On Pin:" + str(self.pin) + "," + "Humidity Sensor:" + str(self.id) + "  On Pin:" + str(self.pin) + "," + "Iterations to Get a Value:"
 		self.growType = "tempSensor" #debugging
+		self.retries = 5 # number of times to attempt to read before giving update
+		self.retriesPause = 0.5 # time to wait between retries, in seconds
 		
 		##########
 		#check for the sensor type
@@ -204,7 +206,7 @@ class tempSensor:
 			print 'This is only a test case'
 			self.sensorType = -9999
 		else:
-			print("Error reading in temp sensor type. This should probably cause an exception")
+			print("Error reading in temp sensor type. This should cause an exception")
 			
 			
 
@@ -215,18 +217,20 @@ class tempSensor:
 		#only including the 22 here because that is all I have to test
 		if self.sensorType == self.sensorLibrary.DHT22:
 			#read in the sensor
-			humidity, temperature = self.sensorLibrary.read_retry(self.sensorType, self.pin)
-			if humidity is not None and temperature is not None:
-				self.lastTemp = tempature
-				self.lastHumd = humidity
-				print 'Temp={0:0.1f}*  Humidity={1:0.1f}%'.format(temperature, humidity)
+			for ii in range(self.retries)
+				humidity, temperature = self.sensorLibrary.read(self.sensorType, self.pin)
+				if humidity is not None and temperature is not None:
+					self.lastTemp = temperature
+					self.lastHumd = humidity
+					self.iteratationsToVal = ii
+					print 'Temp={0:0.1f}*  Humidity={1:0.1f}%'.format(temperature, humidity)
+					break # have the data, now leave
 			else:
-				self.lastTemp = -9999
-				self.lastHumd = -9999
-				print 'Failed to get reading. Try again!'
+				self.iteratationsToVal = -9999
+				print 'Failed to get reading'
 		
 	def returnStatusString(self):
-		return str(self.lastTemp) + "," + str(self.lastHumd)
+		return str(self.lastTemp) + "," + str(self.lastHumd) + "," + str(self.iteratationsToVal)
 		
 		
 class control:
