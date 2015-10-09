@@ -164,16 +164,30 @@ class fan:
 			
 		
 class tempSensor:
-	def __init__(self,sensorNumber,pin,sensorType):
+#properties:	
+	# sensorNumber: Index of the sensor, relative only to this class
+	# pin: the GPIO number used on the pi
+	# sensorType: sensor name ie: DHT22, DHT11, AM2302
+	# sensorLibrary: the library that needs to be imported for the sensor
+	#					is what is called to read the sensor, if not needed pass in dummy value
+	# lastTemp: the value the last time temp was taken
+	# lastHumd: the humidity last time it was taken
+	# growType: value included in all growControl classes, describes the sensor.  Should not be used in production code
+	# reportHeaders: the data in the top row of an output file
+#methods
+	# __init__: creates an instance
+	# update(): reads the sensor
+	# returnStatusString(): returns a string of the last recorded data
+	
+	def __init__(self,sensorNumber,pin,sensorType,sensorLibrary):
 		##########
 		#configurable values
 		##########
 		self.id = sensorNumber #number of the sensor, index starts at 0
 		self.pin = pin #GPIO pin used
-		self.sensorType = type #string "DHT22" is only one currently being used
 		self.lastTemp = -9999 #set to the last measured tempature, init at impossible value, value in C
 		self.lastHumd = -9999 #set the the last measured humidity, init at impossible value, value in %
-	
+		self.sensorLibrary = sensorLibrary #library that is called to read the sensor, needed for Adafruit stuff
 	
 		##########
 		#hard coded but configurable in source code
@@ -181,10 +195,36 @@ class tempSensor:
 		self.reportItemHeaders = "Temp Sensor:" + str(self.id) + "  On Pin:" + str(self.pin) + "," + "Humidity Sensor:" + str(self.id) + "  On Pin:" + str(self.pin)
 		self.growType = "tempSensor" #debugging
 		
-		
+		##########
+		#check for the sensor type
+		##########
+		if sensorType == "DHT22":
+			self.sensorType = sensorLibrary.DHT22
+		elif sensorType == "X":
+			print 'This is only a test case'
+			self.sensorType = -9999
+		else:
+			print("Error reading in temp sensor type. This should probably cause an exception")
+			
+			
+
+
 	def update(self):
 		print "In tempSensor[" + str(self.id) + "].update()"
-	
+		#if statement so other sensors can be easily added
+		#only including the 22 here because that is all I have to test
+		if self.sensorType == self.sensorLibrary.DHT22:
+			#read in the sensor
+			humidity, temperature = self.sensorLibrary.read_retry(self.sensorType, self.pin)
+			if humidity is not None and temperature is not None:
+				self.lastTemp = tempature
+				self.lastHumd = humidity
+				print 'Temp={0:0.1f}*  Humidity={1:0.1f}%'.format(temperature, humidity)
+			else:
+				self.lastTemp = -9999
+				self.lastHumd = -9999
+				print 'Failed to get reading. Try again!'
+		
 	def returnStatusString(self):
 		return str(self.lastTemp) + "," + str(self.lastHumd)
 		

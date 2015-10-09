@@ -53,5 +53,5 @@ while on:
 	localTime = strftime("%Y",localtime())+ "-" +strftime("%m",localtime())+ "-" +strftime("%d",localtime())+ "-" + strftime("%H",localtime())+strftime("%M",localtime())
 	gc.readStatus(inputDevices)
 	gc.deviceControl(setableDevices)
-	gc.writeStatus(inputDevices+setableDevices,outFileName)
+	gc.writeStatus(inputDevices+setableDevices,outFileName,gc.getDateTime(1,1))
 	time.sleep(control.recordInterval)
