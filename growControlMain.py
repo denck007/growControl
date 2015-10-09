@@ -5,7 +5,7 @@ sys.path.append("C:\\Users\\Neil\\Documents\\GitHub\\Adafruit_Python_DHT")
 sys.path.append("~/git/Adafruit/~/git/Adafruit_Python_DHT")
 import Adafruit_DHT
 import growControl as gc
-from time import localtime, strftime
+from time import localtime, strftime, sleep
 
 # hard code this for now
 #initialize the setup

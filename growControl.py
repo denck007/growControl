@@ -20,7 +20,7 @@ def deviceControl(devices):
 def writeStatus(devices,fileName,theTime):
 # this function goes over all the devices and writes their status to the output file.
 # expects a list of lists of devices, each device must have the method returnStatusString()
-	statusOut = "" 
+	statusOut = theTime 
 	for deviceGrp in range(len(devices)): #loop over each device group
 		for device in range(len(devices[deviceGrp])): # loop over each device in the group
 			print "writeStatus - deviceGrp: " + str(deviceGrp) + "  device: " + str(device) #debug
@@ -36,7 +36,7 @@ def writeStatus(devices,fileName,theTime):
 def initFile(devices,fileName):
 # This function reads in the headers defined in the object definition for the column headers
 # writes device.reportItemHeaders() to the given file
-	headersOut = "" 
+	headersOut = "Date and Time:"
 	for deviceGrp in range(len(devices)): #loop over each device group
 		for device in range(len(devices[deviceGrp])): # loop over each device in the group
 			headersOut=headersOut + devices[deviceGrp][device].reportItemHeaders + "," # add the status to the string
@@ -217,7 +217,7 @@ class tempSensor:
 		#only including the 22 here because that is all I have to test
 		if self.sensorType == self.sensorLibrary.DHT22:
 			#read in the sensor
-			for ii in range(self.retries)
+			for ii in range(self.retries):
 				humidity, temperature = self.sensorLibrary.read(self.sensorType, self.pin)
 				if humidity is not None and temperature is not None:
 					self.lastTemp = temperature
