@@ -9,18 +9,17 @@ def readStatus(devices):
 			#print "readStatus - device: " + str(device)
 			devices[deviceGrp][device].update()
 		
-def deviceControl(devices):
+def deviceControl(devices,control,theTime,GPIO):
 	for deviceGrp in range(len(devices)):
 		#print "deviceControl - deviceGrp: " + str(deviceGrp)
 		for device in range(len(devices[deviceGrp])):
 			#print "deviceControl - device: " + str(device)
-			devices[deviceGrp][device].control(devices,control)
-	
-	
-def writeStatus(devices,fileName,theTime):
+			devices[deviceGrp][device].control(devices,control,GPIO)
+		
+def writeStatus(devices,fileName,theDateTime):
 # this function goes over all the devices and writes their status to the output file.
 # expects a list of lists of devices, each device must have the method returnStatusString()
-	statusOut = theTime + "," #start each line with the date/time
+	statusOut = theDateTime + "," #start each line with the date/time
 	for deviceGrp in range(len(devices)): #loop over each device group
 		for device in range(len(devices[deviceGrp])): # loop over each device in the group
 			#print "writeStatus - deviceGrp: " + str(deviceGrp) + "  device: " + str(device) #debug
@@ -31,8 +30,7 @@ def writeStatus(devices,fileName,theTime):
 	outFile = open(fileName,"a") #open the file for appending
 	outFile.write(statusOut + "\n") #append the file with the data
 	outFile.close() #close the file
-	
-	
+		
 def initFile(devices,fileName):
 # This function reads in the headers defined in the object definition for the column headers
 # writes device.reportItemHeaders() to the given file
@@ -45,34 +43,57 @@ def initFile(devices,fileName):
 	outFile = open(fileName,"a") #open the file for appending
 	outFile.write(headersOut + "\n") #append the file with the data
 	outFile.close() #close the file
+
+def initializeAllDevices(devices,GPIO):
+# call the initGPIO on all the devices
+	curEpochTime = getDateTime(0,0,1)
+	for deviceGrp in range(len(devices)): #loop over each device group
+		for device in range(len(devices[deviceGrp])): # loop over each device in the group
+			devices[deviceGrp][device].initGPIO(GPIO,curEpochTime)
 	
-	
-def getDateTime(d,t):
+def getDateTime(d,t,s):
 	#returns the date and or time
 	# if date ==1 return the date
 	# if time ==1 return the time 
 	# if both return both in YYYY-MM-DD-HH:MM:SS format
-	# if neither, return blank string
-	from time import localtime, strftime
-	
-	date = strftime("%Y",localtime())+ "-" +strftime("%m",localtime())+ "-" +strftime("%d",localtime())
-	time = strftime("%H",localtime())+":"+strftime("%M",localtime())+":"+strftime("%S",localtime())
-	if d>1 or d<0 or t>1 or t<0:
-		return "Error in passing time values: Value out of input range"
-	if d and t:
-		return date + "-" + time
-	elif(d):
-		return date	
-	elif t:
-		return time
+	# if only s return epoch time
+	from time import localtime, strftime, time
+
+	if (d == 1 or t == 1) and not s: #cases for returning strings
+		date = strftime("%Y",localtime())+ "-" +strftime("%m",localtime())+ "-" +strftime("%d",localtime())
+		time = strftime("%H",localtime())+":"+strftime("%M",localtime())+":"+strftime("%S",localtime())
+		if d>1 or d<0 or t>1 or t<0:
+			return "Error in passing time values: Value out of input range"
+		if d and t:
+			return date + "-" + time
+		elif d and not t:
+			return date	
+		elif t and not d:
+			return time
+		else:
+			return "Something unexpected happened in getting the time"
+	elif s: # get epoch time
+		return time()
 	else:
-		return ""
+		"No values requested from getDateTime()"
+
+def  getMinuteDiff(timeToCompare):
+	# returns the minute difference in the time from current time to timeToCompare()
+	# 	EX: current local time is 1704, timeToCompare is 0605, returns 1099
 	
+	from time import strftime,localtime
 	
+	curTime = float(strftime("%H%M",localtime()))
+	print ""
+	print ""
+	print "Time to Compare: " + str(timeToCompare)
+	print "Current epoch Time: " + str(curTime)
+	print "Difference is: " + str(curTime - timeToCompare)
+	return curTime - float(timeToCompare)
 	
 	
 ##########	
-#Class Defintions
+#Class Definitions
 ##########	
 # Generic Class Notes:
 ## ids
@@ -84,6 +105,19 @@ def getDateTime(d,t):
 ### if more that 2 data points are to be returned, then they must be separated by a comma
 ### do not include a comma at the start or end of the string
 ### data validation should be done here
+#
+# all device classes must have:
+## __init__(this varies between classes) - All the initialized values
+## initGPIO(GPIO module, current time in epoch seconds) #call to initialize GPIO on the device
+## returnStatusString() # returns the status of the device
+#
+# all Controlable devices need to have:
+## control(list of all the devices, the control object, the GPIO module) # runs the device's control methods
+#
+# all readable devices must have:
+## update() # reads the device status
+
+
 class light:
 	def __init__(self,lightNumber,pin,timeOn,timeOff,fans,tempS):
 		##########
@@ -116,52 +150,142 @@ class light:
 		##########
 		self.status = 0 # 0 for off, 1 for on, always init to 0
 		self.growType = "light" #debugging
-		
-	
+			
 	def returnStatusString(self):
 		if self.status == 1:
 			return "On"
 		else:
 			return "Off"
-			
-			
-	def control(self, devices, configControl):
-		print "In light[" + str(self.id) + "].control"
+		
 
-	
-	
+		
+	def control(self, devices, control, GPIO):
+		#this is written such that GPIO.HIGH is light on
+
+		testOn = getMinuteDiff(self.fanOnAt)
+		testOff = getMinuteDiff(self.fanOffAt)
+		if testOn >= 0 and testOff < 0:
+			# time in the off times, set light off
+			self.status = GPIO.HIGH
+			print "light #" + str(self.id) + " is on"
+		else:
+			# if the light is not between the off times, it should be on
+			self.status = GPIO.LOW
+			print "light #" + str(self.id) + " is off"
+		
+		
+		# this should always be the last thing to run in the control method
+		# it checks if any of the temperature sensors are exceeding the limit set in control and if so, sets light to low
+		# by being the last check in the control method, it insures a high temp will cause light on
+		for dg in devices:
+			for d in dg:
+				if d.growType == "tempSensor":
+					if d.lastTemp >control.MaxTemp:
+						status = GPIO.LOW		
+						print "----------------------"
+						print "-- light " + str(self.id) + " status changed because of high reading on Temp Sensor " + str(d.id)
+						print "----------------------"
+						
+		GPIO.output(self.pin, self.status) #finally set the light value
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
 class fan:
 #definition of a fan
-	def __init__(self,fanNumber,pin, fanType):
+	def __init__(self,fanNumber, pin, fanOnType,onTime, offTime):
 		##########
 		#configurable values
 		##########
 		self.id = fanNumber #number of the fan, index starts at 0
 		self.pin = pin #GPIO pin used
-		self.fanType = fanType # the type of fan it is, 1= inlet, 2 = exhaust, 3 = internal
+		self.fanOnType = fanOnType # 1 = fan on between certain times in the day, 2=on for specified time, off for specified time, 3 = Always on
+		self.fanOnAt = float(onTime) # the time the fan will turn on if fanOnType=1, duration fan on for if fanOnType=2
+		self.fanOffAt = float(offTime) #time the fan turns off if fanOnType=1, duration fan off for if fanType=2
+			# fanOffAt > fanOnAt, otherwise it will not work properly
 		
 		##########
 		#hard coded but configurable in source code
 		##########
 		self.reportItemHeaders = "Fan:" + str(self.id) + "  On Pin:" + str(self.pin)
-		
-		
+				
 		##########
 		#hard coded and should not be messed with
 		##########
 		self.status = 0 # 0 for off, 1 for on, always init to 0
 		self.growType = "fan" #debugging
-	
-	
-	def control(self, devices, configControl):
-		print "In fan[" + str(self.id) + "].control"
+		
+		##########
+		#Program set values
+		##########		
+		curTime = getDateTime(0,0,1)
+		self.lastOn = curTime # epoch, last time the fan was turned on
+		self.lastOff = 0  #epoch, last time the fan was turned off
+		
+	def initGPIO(self, GPIO, curEpochTime):
+		GPIO.setup(self.pin,GPIO.OUT) #initialize the pin as out
+		GPIO.output(self.pin,GPIO.HIGH) # initialize the fans to on
+		
+		self.lastOn = curEpochTime #set the first on time fan was turned on to now
+		self.lastOff = curEpochTime # set the last time the fan was turned off to now
+		
+	def control(self, devices, control, GPIO):
+		#this is written such that GPIO.HIGH is fan on
+			
+		#run checks to see what type of fan and what controls to use, then actually control it
+		if self.fanOnType == 1:
+			#print "fanOnType == 1"
+			testOn = getMinuteDiff(self.fanOnAt)
+			testOff = getMinuteDiff(self.fanOffAt)
+			if testOn >= 0 and testOff < 0:
+				# time in the off times, set fan off
+				self.status = GPIO.HIGH
+				print "Fan #" + str(self.id) + " is on"
+			else:
+				# if the fan is not between the off times, it should be on
+				self.status = GPIO.LOW
+				print "Fan #" + str(self.id) + " is off"
+			
+		elif self.fanOnType ==2:
+			# this type runs for fanOnAt minutes, then turns off for fanOffAt minutes
+			print "fanOnType == 2 is not yet supported, please change the type of fan #" + str(self.id)
+		elif self.fanOnType ==3:
+			# this type is always on
+			print "fanOnType == 3"				
+			self.status = GPIO.HIGH
+		
+		else:
+			print "fanOnType not defined or not recognized, setting to always on"
+			self.status = GPIO.HIGH
+		
+		#this should always be the last thing to run in the control method
+		# it checks if any of the temperature sensors are exceeding the limit set in control and if so, sets fan to high
+		#by being the last check in the control method, it insures a high temp will cause fans on
+		for dg in devices:
+			for d in dg:
+				if d.growType == "tempSensor":
+					if d.lastTemp >control.MaxTemp:
+						status = GPIO.HIGH		
+						print "----------------------"
+						print "-- Fan " + str(self.id) + " status changed because of high reading on Temp Sensor " + str(d.id)
+						print "----------------------"
+						
+		GPIO.output(self.pin, self.status) #finally set the fan value
 
+			
+					
 	def returnStatusString(self):
 		if self.status == 1:
 			return "On"
 		else:
 			return "Off"
-			
+
 		
 class tempSensor:
 #properties:	
@@ -179,7 +303,7 @@ class tempSensor:
 	# update(): reads the sensor
 	# returnStatusString(): returns a string of the last recorded data
 	
-	def __init__(self,sensorNumber,pin,sensorType,sensorLibrary):
+	def __init__(self, sensorNumber, pin, sensorType, sensorLibrary):
 		##########
 		#configurable values
 		##########
@@ -196,9 +320,11 @@ class tempSensor:
 		self.reportItemHeaders = "Temp Sensor:" + str(self.id) + "  On Pin:" + str(self.pin) + "," + "Humidity Sensor:" + str(self.id) + "  On Pin:" + str(self.pin) + "," + "Iterations to Get a Value on Pin:" + str(self.pin)
 		self.growType = "tempSensor" #debugging
 		self.retries = 5 # number of times to attempt to read before giving update
-		self.retriesPause = 10 # time to wait between retries, in seconds
-		
-
+		self.retriesPause = 0.5 # time to wait between retries, in seconds
+	
+	def initGPIO(self, GPIO, curEpochTime):
+		print "initGPIO inside of tempSensor " + str(self.id)
+	
 	def update(self):
 		#print "In tempSensor[" + str(self.id) + "].update()" #debug
 		#if statement so other sensors can be easily added
@@ -221,16 +347,15 @@ class tempSensor:
 			from random import randint as rand
 			self.lastTemp = rand(0,25)
 			self.lastHumd = rand(0,100)
-			self.iteratationsToVal = "This is only a test"
+			self.iteratationsToVal = -1
 			print "leaving Test"
 
 		else:
 			print("Error reading in temp sensor type. This should cause an exception")
-			
-
+	
 	def returnStatusString(self):
 		return str(self.lastTemp) + "," + str(self.lastHumd) + "," + str(self.iteratationsToVal)
-		
+
 		
 class control:
 #all the control variables go here
@@ -238,5 +363,3 @@ class control:
 		self.maxTemp = maxTemp #max tempature of the system , causes light to go off, in C
 		self.minTemp = minTemp #minimum tempature of the system, in C
 		self.recordInterval =recordInterval #how often to record, in seconds
-		
-	
