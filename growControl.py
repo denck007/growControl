@@ -1,5 +1,31 @@
 #this file defines the objects and functions for the grow control program
-
+def readConfig(GPIO, relayType):
+# This will eventually be the function that reads in the configuration file and does all of the initial validation
+# Until then, this function will have kind of random things happening in it
+# This function will eventually only need to be passed the GPIO module and the config file name
+	
+	# Check the relay type, allows support for normally open and normally closed relays
+	# The intention here is to make the device methods easier to understand
+	#		by not having things turn on when set to low
+	global RELAYON
+	global RELAYOFF
+	if relayType == "NORMALLY_OPEN":
+		# The relays are normally open, the attached device is not receiving power when the input pin is set to 0V
+		RELAYON = GPIO.HIGH
+		RELAYOFF = GPIO.LOW
+	elif relayType == "NORMALLY_CLOSED":
+		# The relays are normally closed, the attached device is receiving power when the input pin is set to 0V
+		RELAYON = GPIO.LOW
+		RELAYOFF = GPIO.HIGH
+	else: 
+		print "!!!!!--ERROR--!!!!!"
+		print "The relay type is not defined properly"
+		print "!!!!!--ERROR--!!!!!"
+		RELAYON = "ERROR"
+		RELAYOFF = "ERROR"
+		
+		
+		
 def readStatus(devices):
 #read the status of the devices
 #devices must have the self.update() method
@@ -63,7 +89,9 @@ def getDateTime(d,t,s):
 		date = strftime("%Y",localtime())+ "-" +strftime("%m",localtime())+ "-" +strftime("%d",localtime())
 		time = strftime("%H",localtime())+":"+strftime("%M",localtime())+":"+strftime("%S",localtime())
 		if d>1 or d<0 or t>1 or t<0:
-			return "Error in passing time values: Value out of input range"
+			print "!!!!!--ERROR--!!!!!"
+			print "Error in passing time values: Value out of input range"
+			print "!!!!!--ERROR--!!!!!"
 		if d and t:
 			return date + "-" + time
 		elif d and not t:
@@ -75,7 +103,9 @@ def getDateTime(d,t,s):
 	elif s: # get epoch time
 		return time()
 	else:
-		"No values requested from getDateTime()"
+		print "!!!!!--ERROR--!!!!!"
+		print "No values requested from getDateTime()"
+		print "!!!!!--ERROR--!!!!!"
 
 def  getMinuteDiff(timeToCompare):
 	# returns the minute difference in the time from current time to timeToCompare()
@@ -84,11 +114,9 @@ def  getMinuteDiff(timeToCompare):
 	from time import strftime,localtime
 	
 	curTime = float(strftime("%H%M",localtime()))
-	print ""
-	print ""
-	print "Time to Compare: " + str(timeToCompare)
-	print "Current epoch Time: " + str(curTime)
-	print "Difference is: " + str(curTime - timeToCompare)
+	#print "Time to Compare: " + str(timeToCompare) #debugging
+	#print "Current epoch Time: " + str(curTime) #debugging
+	#print "Difference is: " + str(curTime - timeToCompare) #debugging
 	return curTime - float(timeToCompare)
 	
 	
@@ -96,6 +124,15 @@ def  getMinuteDiff(timeToCompare):
 #Class Definitions
 ##########	
 # Generic Class Notes:
+
+
+########################
+# IMPORTANT: ANYTHING ATTACHED TO A RELAY MUST NOT BE ATTACHED TO GPIO2-4 (PINS 3,5,7)
+#			GPIO 2&3 have pull up resistors which make them want to flip between on and off (because they are I2C)
+#			GPIO 4 has something else wrong with it, not sure what, but is causes the same problem
+########################
+
+
 ## ids
 ### should be in order with no id being used twice.
 #
@@ -116,6 +153,7 @@ def  getMinuteDiff(timeToCompare):
 #
 # all readable devices must have:
 ## update() # reads the device status
+
 
 
 class light:
@@ -148,30 +186,32 @@ class light:
 		##########
 		#hard coded and should not be messed with
 		##########
-		self.status = 0 # 0 for off, 1 for on, always init to 0
-		self.growType = "light" #debugging
+		self.status = RELAYOFF # Lights should only turn on after initialization
+		self.growType = "light"
 			
 	def returnStatusString(self):
-		if self.status == 1:
+		if self.status == RELAYON:
 			return "On"
 		else:
 			return "Off"
 		
-
-		
 	def control(self, devices, control, GPIO):
 		#this is written such that GPIO.HIGH is light on
 
-		testOn = getMinuteDiff(self.fanOnAt)
-		testOff = getMinuteDiff(self.fanOffAt)
+		testOn = getMinuteDiff(self.timeOn)
+		testOff = getMinuteDiff(self.timeOff)
+		print ""
+		print "Light " + str(self.id) + " testOn = " + str(testOn)
+		print "Light " + str(self.id) + " testOff = " + str(testOn)
+		
 		if testOn >= 0 and testOff < 0:
 			# time in the off times, set light off
-			self.status = GPIO.HIGH
-			print "light #" + str(self.id) + " is on"
+			self.status = RELAYON
+			print "STATUS CHANGE				Light " + str(self.id) + " is on"
 		else:
 			# if the light is not between the off times, it should be on
-			self.status = GPIO.LOW
-			print "light #" + str(self.id) + " is off"
+			self.status = RELAYOFF
+			print "STATUS CHANGE				Light " + str(self.id) + " is off"
 		
 		
 		# this should always be the last thing to run in the control method
@@ -181,13 +221,19 @@ class light:
 			for d in dg:
 				if d.growType == "tempSensor":
 					if d.lastTemp >control.MaxTemp:
-						status = GPIO.LOW		
-						print "----------------------"
-						print "-- light " + str(self.id) + " status changed because of high reading on Temp Sensor " + str(d.id)
-						print "----------------------"
+						self.status = RELAYOFF
+						print "!!!!!--ERROR--!!!!!"
+						print "-- Light " + str(self.id) + " status changed because of high reading on Temp Sensor " + str(d.id)
+						print "!!!!!--ERROR--!!!!!"
 						
 		GPIO.output(self.pin, self.status) #finally set the light value
+	
+	def initGPIO(self, GPIO, curEpochTime):
+		GPIO.setup(self.pin,GPIO.OUT) #initialize the pin as out
+		GPIO.output(self.pin,self.status) # initialize the light to default value, should be off
 		
+		self.lastOn = curEpochTime #set the first on time light was turned on to now
+		self.lastOff = curEpochTime # set the last time the light was turned off to now	
 		
 		
 		
@@ -218,8 +264,8 @@ class fan:
 		##########
 		#hard coded and should not be messed with
 		##########
-		self.status = 0 # 0 for off, 1 for on, always init to 0
-		self.growType = "fan" #debugging
+		self.status = RELAYON # init to on
+		self.growType = "fan"
 		
 		##########
 		#Program set values
@@ -230,7 +276,7 @@ class fan:
 		
 	def initGPIO(self, GPIO, curEpochTime):
 		GPIO.setup(self.pin,GPIO.OUT) #initialize the pin as out
-		GPIO.output(self.pin,GPIO.HIGH) # initialize the fans to on
+		GPIO.output(self.pin,self.status) # initialize the fans to on
 		
 		self.lastOn = curEpochTime #set the first on time fan was turned on to now
 		self.lastOff = curEpochTime # set the last time the fan was turned off to now
@@ -243,14 +289,18 @@ class fan:
 			#print "fanOnType == 1"
 			testOn = getMinuteDiff(self.fanOnAt)
 			testOff = getMinuteDiff(self.fanOffAt)
+			print ""
+			print "Fan " + str(self.id) + " testOn = " + str(testOn)
+			print "Fan " + str(self.id) + " testOff = " + str(testOn)
+
 			if testOn >= 0 and testOff < 0:
 				# time in the off times, set fan off
-				self.status = GPIO.HIGH
-				print "Fan #" + str(self.id) + " is on"
+				self.status = RELAYON
+				print "STATUS CHANGE				Fan " + str(self.id) + " is on"
 			else:
 				# if the fan is not between the off times, it should be on
-				self.status = GPIO.LOW
-				print "Fan #" + str(self.id) + " is off"
+				self.status = RELAYOFF
+				print "STATUS CHANGE				Fan " + str(self.id) + " is off"
 			
 		elif self.fanOnType ==2:
 			# this type runs for fanOnAt minutes, then turns off for fanOffAt minutes
@@ -258,11 +308,11 @@ class fan:
 		elif self.fanOnType ==3:
 			# this type is always on
 			print "fanOnType == 3"				
-			self.status = GPIO.HIGH
+			self.status = RELAYON
 		
 		else:
 			print "fanOnType not defined or not recognized, setting to always on"
-			self.status = GPIO.HIGH
+			self.status = RELAYON
 		
 		#this should always be the last thing to run in the control method
 		# it checks if any of the temperature sensors are exceeding the limit set in control and if so, sets fan to high
@@ -270,18 +320,18 @@ class fan:
 		for dg in devices:
 			for d in dg:
 				if d.growType == "tempSensor":
-					if d.lastTemp >control.MaxTemp:
-						status = GPIO.HIGH		
-						print "----------------------"
+					if d.lastTemp > control.MaxTemp:
+						self.status = RELAYON
+						print "!!!!!--ERROR--!!!!!"
 						print "-- Fan " + str(self.id) + " status changed because of high reading on Temp Sensor " + str(d.id)
-						print "----------------------"
+						print "!!!!!--ERROR--!!!!!"
 						
 		GPIO.output(self.pin, self.status) #finally set the fan value
 
 			
 					
 	def returnStatusString(self):
-		if self.status == 1:
+		if self.status == RELAYON:
 			return "On"
 		else:
 			return "Off"
@@ -318,7 +368,7 @@ class tempSensor:
 		#hard coded but configurable in source code
 		##########
 		self.reportItemHeaders = "Temp Sensor:" + str(self.id) + "  On Pin:" + str(self.pin) + "," + "Humidity Sensor:" + str(self.id) + "  On Pin:" + str(self.pin) + "," + "Iterations to Get a Value on Pin:" + str(self.pin)
-		self.growType = "tempSensor" #debugging
+		self.growType = "tempSensor"
 		self.retries = 5 # number of times to attempt to read before giving update
 		self.retriesPause = 0.5 # time to wait between retries, in seconds
 	
@@ -329,6 +379,7 @@ class tempSensor:
 		#print "In tempSensor[" + str(self.id) + "].update()" #debug
 		#if statement so other sensors can be easily added
 		#only including the 22 here because that is all I have to test
+		print "Reading Tempature Sensor: " + str(self.id)
 		if self.sensorType == "DHT22":
 			#read in the sensor
 			for ii in range(self.retries):
@@ -337,7 +388,7 @@ class tempSensor:
 					self.lastTemp = temperature
 					self.lastHumd = humidity
 					self.iteratationsToVal = ii
-					print 'Temp={0:0.1f}*  Humidity={1:0.1f}%'.format(temperature, humidity)
+					print 'Temp={0:0.1f}*C  Humidity={1:0.1f}%'.format(temperature, humidity)
 					break # have the data, now leave
 			else:
 				self.iteratationsToVal = -9999
