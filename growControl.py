@@ -6,12 +6,12 @@ def readConfig(GPIO, relayType):
 	
 	# Check the relay type, allows support for normally open and normally closed relays
 	# The intention here is to make the device methods easier to understand
-	#		by not having things turn on when set to low
+	# 		by not having things turn on when set to low
 	global RELAYON
 	global RELAYOFF
 	
 	if GPIO == "TEST":
-		#testCase
+		#testing on PC(GPIO does not exist here) testCase
 		RELAYON = 1
 		RELAYOFF = 0
 	else:
@@ -24,9 +24,7 @@ def readConfig(GPIO, relayType):
 			RELAYON = GPIO.LOW
 			RELAYOFF = GPIO.HIGH
 		else: 
-			print "!!!!!--ERROR--!!!!!"
-			print "The relay type is not defined properly"
-			print "!!!!!--ERROR--!!!!!"
+			errorDisplay("The relay type is not defined properly")
 			RELAYON = "ERROR"
 			RELAYOFF = "ERROR"
 			
@@ -72,6 +70,7 @@ def readStatus(devices):
 			devices[deviceGrp][device].update()
 		
 def deviceControl(devices,control,theTime,GPIO):
+	#print "In deviceControl"
 	for deviceGrp in range(len(devices)):
 		#print "deviceControl - deviceGrp: " + str(deviceGrp)
 		for device in range(len(devices[deviceGrp])):
@@ -93,7 +92,7 @@ def writeStatus(devices,fileName,theDateTime):
 	outFile.write(statusOut + "\n") #append the file with the data
 	outFile.close() #close the file
 		
-def initFile(devices,fileName):
+def initFile(devices,control):
 # This function reads in the headers defined in the object definition for the column headers
 # writes device.reportItemHeaders() to the given file
 	headersOut = "Date and Time (YYYY-MM-DD-HH:MM:SS):,"
@@ -101,8 +100,8 @@ def initFile(devices,fileName):
 		for device in range(len(devices[deviceGrp])): # loop over each device in the group
 			headersOut=headersOut + devices[deviceGrp][device].reportItemHeaders + "," # add the status to the string
 	
-	
-	outFile = open(fileName,"a") #open the file for appending
+	control.fileHeaders = headersOut
+	outFile = open(control.fileName,"a") #open the file for appending
 	outFile.write(headersOut + "\n") #append the file with the data
 	outFile.close() #close the file
 
@@ -146,7 +145,7 @@ def getDateTime(d,t,s,iso):
 		print "No values requested from getDateTime()"
 		print "!!!!!--ERROR--!!!!!"
 
-def  getMinuteDiff(timeToCompare):
+def getMinuteDiff(timeToCompare):
 	# returns the minute difference in the time from current time to timeToCompare()
 	# 	EX: current local time is 1704, timeToCompare is 0605, returns 1099
 	
@@ -157,7 +156,12 @@ def  getMinuteDiff(timeToCompare):
 	#print "Current epoch Time: " + str(curTime) #debugging
 	#print "Difference is: " + str(curTime - timeToCompare) #debugging
 	return curTime - float(timeToCompare)
-	
+
+def errorDisplay(t):
+	# cleanish way to call out an error in interactive mode 
+	print "!!!!!--ERROR--!!!!!"
+	print t
+	print "!!!!!--ERROR--!!!!!"
 	
 ##########	
 #Class Definitions
@@ -307,8 +311,7 @@ class fan:
 		self.lastOff = curEpochTime # set the last time the fan was turned off to now
 		
 	def control(self, devices, control, GPIO):
-		#this is written such that GPIO.HIGH is fan on
-			
+		oldStatus = self.status #record the original status so we know if it changes
 		#run checks to see what type of fan and what controls to use, then actually control it
 		if self.fanOnType == 1:
 			#print "fanOnType == 1"
@@ -321,9 +324,11 @@ class fan:
 			if testOn >= 0 and testOff < 0:
 				# time in the off times, set fan off
 				self.status = RELAYON
+				print "Relay on"
 			else:
 				# if the fan is not between the off times, it should be on
 				self.status = RELAYOFF
+				print "Relay off"
 			
 		elif self.fanOnType ==2:
 			# this type runs for fanOnAt minutes, then turns off for fanOffAt minutes
@@ -336,10 +341,10 @@ class fan:
 		else:
 			print "fanOnType not defined or not recognized, setting to always on"
 			self.status = RELAYON
-		
+
 		if oldStatus != self.status:
-			print "STATUS CHANGE: FAN " + str(seld.id)
-			
+			print "STATUS CHANGE: FAN " + str(self.id)
+		
 		#this should always be the last thing to run in the control method
 		# it checks if any of the temperature sensors are exceeding the limit set in control and if so, sets fan to high
 		#by being the last check in the control method, it insures a high temp will cause fans on
@@ -444,7 +449,7 @@ class control:
 		self.fileLength = fileLength #number of lines to record in the file
 		self.fileName = baseFileName + getDateTime(0,0,0,1) + ".csv" #first file name to save to
 		self.iterations = 1 #initialize the iteration counter to 1
-		
+		self.fileHeaders = "" # the headers for the output file, initialize to empty string
 	def check(self):
 		# check to make sure that everything is within the extremes 
 		print "Should probably check the extremes here"
@@ -455,6 +460,9 @@ class control:
 			print "Too Many iterations, creating new file"
 			self.fileName = self.baseFileName + getDateTime(0,0,0,1) + ".csv"
 			self.iterations = 1 #reset the counter
+			outFile = open(self.fileName,"a") #open the file for appending
+			outFile.write(self.fileHeaders + "\n") #append the file with the data
+			outFile.close() #close the file
 		else: 
 			print "Under limit of iterations"
 			self.iterations = self.iterations + 1 #add to the counter
