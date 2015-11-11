@@ -9,22 +9,58 @@ def readConfig(GPIO, relayType):
 	#		by not having things turn on when set to low
 	global RELAYON
 	global RELAYOFF
-	if relayType == "NORMALLY_OPEN":
-		# The relays are normally open, the attached device is not receiving power when the input pin is set to 0V
-		RELAYON = GPIO.HIGH
-		RELAYOFF = GPIO.LOW
-	elif relayType == "NORMALLY_CLOSED":
-		# The relays are normally closed, the attached device is receiving power when the input pin is set to 0V
-		RELAYON = GPIO.LOW
-		RELAYOFF = GPIO.HIGH
-	else: 
-		print "!!!!!--ERROR--!!!!!"
-		print "The relay type is not defined properly"
-		print "!!!!!--ERROR--!!!!!"
-		RELAYON = "ERROR"
-		RELAYOFF = "ERROR"
-		
-		
+	
+	if GPIO == "TEST":
+		#testCase
+		RELAYON = 1
+		RELAYOFF = 0
+	else:
+		if relayType == "NORMALLY_OPEN":
+			# The relays are normally open, the attached device is not receiving power when the input pin is set to 0V
+			RELAYON = GPIO.HIGH
+			RELAYOFF = GPIO.LOW
+		elif relayType == "NORMALLY_CLOSED":
+			# The relays are normally closed, the attached device is receiving power when the input pin is set to 0V
+			RELAYON = GPIO.LOW
+			RELAYOFF = GPIO.HIGH
+		else: 
+			print "!!!!!--ERROR--!!!!!"
+			print "The relay type is not defined properly"
+			print "!!!!!--ERROR--!!!!!"
+			RELAYON = "ERROR"
+			RELAYOFF = "ERROR"
+			
+	#import ConfigParser
+
+	#def ConfigSectionMap(section):
+	#	dict1 = {}
+	#	options = Config.options(section)
+	#	for option in options:
+	#		try:
+	#			dict1[option] = Config.get(section, option)
+	#			if dict1[option] == -1:
+	#				DebugPrint("skip: %s" % option)
+	#		except:
+	#			print("exception on %s!" % option)
+	#			dict1[option] = None
+	#	return dict1
+    #
+	#tempSensors = []
+	#lights = []
+	#fans = []
+	#Config = ConfigParser.ConfigParser()
+	#Config.read("C:\\Users\\Neil\\Documents\\GitHub\\growControl\\growControl.config")
+	#sectionNames = Config.sections()
+	#for ii in sectionNames:
+	#	name = sectionNames[ii][:-3]
+	#	number = int(sectionNames[ii][-3:])
+	#	if name == "temp":
+	#		id = number
+	#		pin = int(ConfigSectionMap(sectionNames[ii])['pin'])
+	#		type = int(ConfigSectionMap(sectionNames[ii])['type']
+	#		tempSensors(append(tempSensor(number,pin,type,)))
+	#
+	
 		
 def readStatus(devices):
 #read the status of the devices
@@ -72,32 +108,35 @@ def initFile(devices,fileName):
 
 def initializeAllDevices(devices,GPIO):
 # call the initGPIO on all the devices
-	curEpochTime = getDateTime(0,0,1)
+	curEpochTime = getDateTime(0,0,1,0)
 	for deviceGrp in range(len(devices)): #loop over each device group
 		for device in range(len(devices[deviceGrp])): # loop over each device in the group
 			devices[deviceGrp][device].initGPIO(GPIO,curEpochTime)
 	
-def getDateTime(d,t,s):
+def getDateTime(d,t,s,iso):
 	#returns the date and or time
 	# if date ==1 return the date
 	# if time ==1 return the time 
 	# if both return both in YYYY-MM-DD-HH:MM:SS format
 	# if only s return epoch time
+	# iso returns the time in accordance with ISO 8601: YYYYMMDDTHHMMSS, in the local time zone
 	from time import localtime, strftime, time
 
-	if (d == 1 or t == 1) and not s: #cases for returning strings
+	if (d == 1 or t == 1 or iso == 1) and not s: #cases for returning strings
 		date = strftime("%Y",localtime())+ "-" +strftime("%m",localtime())+ "-" +strftime("%d",localtime())
 		time = strftime("%H",localtime())+":"+strftime("%M",localtime())+":"+strftime("%S",localtime())
 		if d>1 or d<0 or t>1 or t<0:
 			print "!!!!!--ERROR--!!!!!"
-			print "Error in passing time values: Value out of input range"
+			print "Error in passing time values: User input value out of input range"
 			print "!!!!!--ERROR--!!!!!"
-		if d and t:
+		if (d and t) and not iso:
 			return date + "-" + time
-		elif d and not t:
+		elif (d and not t) and not iso:
 			return date	
-		elif t and not d:
+		elif (t and not d) and not iso:
 			return time
+		elif iso and not (t or d):
+			return strftime("%Y",localtime())+strftime("%m",localtime())+strftime("%d",localtime()) + strftime("%H",localtime())+strftime("%M",localtime())+strftime("%S",localtime())
 		else:
 			return "Something unexpected happened in getting the time"
 	elif s: # get epoch time
@@ -157,7 +196,7 @@ def  getMinuteDiff(timeToCompare):
 
 
 class light:
-	def __init__(self,lightNumber,pin,timeOn,timeOff,fans,tempS):
+	def __init__(self,lightNumber,pin,timeOn,timeOff):
 		##########
 		#configurable values
 		##########
@@ -165,14 +204,6 @@ class light:
 		self.pin = pin #GPIO pin used
 		self.timeOn = timeOn #time the light comes on, ex: 0705 for 7:05am; 1934 for 7:34 pm
 		self.timeOff = timeOff #time the light turns off
-		
-		# this links what fans and temp sensors belong to what lights
-		# is a list of what fans/temp sensors are associated with this self.light
-		# ex: self.fans = [0,1,2,4] means that self.light is associated with fans with ids 0,1,2, and 4
-		self.fans = fans
-		self.tempS = tempS
-		
-		
 		
 		##########
 		#hard coded but configurable in source code
@@ -196,10 +227,12 @@ class light:
 			return "Off"
 		
 	def control(self, devices, control, GPIO):
-		#this is written such that GPIO.HIGH is light on
-
+			
+		oldStatus = self.status
+		
 		testOn = getMinuteDiff(self.timeOn)
 		testOff = getMinuteDiff(self.timeOff)
+		
 		print ""
 		print "Light " + str(self.id) + " testOn = " + str(testOn)
 		print "Light " + str(self.id) + " testOff = " + str(testOn)
@@ -207,13 +240,12 @@ class light:
 		if testOn >= 0 and testOff < 0:
 			# time in the off times, set light off
 			self.status = RELAYON
-			print "STATUS CHANGE				Light " + str(self.id) + " is on"
 		else:
 			# if the light is not between the off times, it should be on
 			self.status = RELAYOFF
-			print "STATUS CHANGE				Light " + str(self.id) + " is off"
 		
-		
+		if oldStatus != self.status:
+			print "STATUS CHANGE: LIGHT " + str(seld.id)
 		# this should always be the last thing to run in the control method
 		# it checks if any of the temperature sensors are exceeding the limit set in control and if so, sets light to low
 		# by being the last check in the control method, it insures a high temp will cause light on
@@ -234,18 +266,11 @@ class light:
 		
 		self.lastOn = curEpochTime #set the first on time light was turned on to now
 		self.lastOff = curEpochTime # set the last time the light was turned off to now	
-		
-		
-		
-		
-		
-		
-		
-		
+
 		
 class fan:
 #definition of a fan
-	def __init__(self,fanNumber, pin, fanOnType,onTime, offTime):
+	def __init__(self,fanNumber, pin, fanOnType, onTime, offTime):
 		##########
 		#configurable values
 		##########
@@ -270,7 +295,7 @@ class fan:
 		##########
 		#Program set values
 		##########		
-		curTime = getDateTime(0,0,1)
+		curTime = getDateTime(0,0,1,0)
 		self.lastOn = curTime # epoch, last time the fan was turned on
 		self.lastOff = 0  #epoch, last time the fan was turned off
 		
@@ -296,11 +321,9 @@ class fan:
 			if testOn >= 0 and testOff < 0:
 				# time in the off times, set fan off
 				self.status = RELAYON
-				print "STATUS CHANGE				Fan " + str(self.id) + " is on"
 			else:
 				# if the fan is not between the off times, it should be on
 				self.status = RELAYOFF
-				print "STATUS CHANGE				Fan " + str(self.id) + " is off"
 			
 		elif self.fanOnType ==2:
 			# this type runs for fanOnAt minutes, then turns off for fanOffAt minutes
@@ -314,6 +337,9 @@ class fan:
 			print "fanOnType not defined or not recognized, setting to always on"
 			self.status = RELAYON
 		
+		if oldStatus != self.status:
+			print "STATUS CHANGE: FAN " + str(seld.id)
+			
 		#this should always be the last thing to run in the control method
 		# it checks if any of the temperature sensors are exceeding the limit set in control and if so, sets fan to high
 		#by being the last check in the control method, it insures a high temp will cause fans on
@@ -336,7 +362,7 @@ class fan:
 		else:
 			return "Off"
 
-		
+
 class tempSensor:
 #properties:	
 	# sensorNumber: Index of the sensor, relative only to this class
@@ -407,10 +433,30 @@ class tempSensor:
 	def returnStatusString(self):
 		return str(self.lastTemp) + "," + str(self.lastHumd) + "," + str(self.iteratationsToVal)
 
-		
+
 class control:
 #all the control variables go here
-	def __init__(self,maxTemp,minTemp,recordInterval):
+	def __init__(self,maxTemp,minTemp,relayType,recordInterval,fileLength,baseFileName):
 		self.maxTemp = maxTemp #max tempature of the system , causes light to go off, in C
 		self.minTemp = minTemp #minimum tempature of the system, in C
 		self.recordInterval =recordInterval #how often to record, in seconds
+		self.baseFileName = baseFileName #the file name to start with
+		self.fileLength = fileLength #number of lines to record in the file
+		self.fileName = baseFileName + getDateTime(0,0,0,1) + ".csv" #first file name to save to
+		self.iterations = 1 #initialize the iteration counter to 1
+		
+	def check(self):
+		# check to make sure that everything is within the extremes 
+		print "Should probably check the extremes here"
+		print "Max number of iterations " + str(self.fileLength) 
+		print "Current iteration Number" + str(self.iterations)
+		# update the file name if it is too long
+		if self.iterations > self.fileLength:
+			print "Too Many iterations, creating new file"
+			self.fileName = self.baseFileName + getDateTime(0,0,0,1) + ".csv"
+			self.iterations = 1 #reset the counter
+		else: 
+			print "Under limit of iterations"
+			self.iterations = self.iterations + 1 #add to the counter
+		
+		
