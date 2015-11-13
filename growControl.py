@@ -24,68 +24,81 @@ def readConfig(GPIO, relayType):
 			RELAYON = GPIO.LOW
 			RELAYOFF = GPIO.HIGH
 		else: 
-			errorDisplay("The relay type is not defined properly")
+			errorDisplay("The relay type of GPIO is not defined properly")
 			RELAYON = "ERROR"
 			RELAYOFF = "ERROR"
-			
-	#import ConfigParser
+	
+	print "Starting to parse the config file"
+	import ConfigParser
 
-	#def ConfigSectionMap(section):
-	#	dict1 = {}
-	#	options = Config.options(section)
-	#	for option in options:
-	#		try:
-	#			dict1[option] = Config.get(section, option)
-	#			if dict1[option] == -1:
-	#				DebugPrint("skip: %s" % option)
-	#		except:
-	#			print("exception on %s!" % option)
-	#			dict1[option] = None
-	#	return dict1
-    #
-	#tempSensors = []
-	#lights = []
-	#fans = []
-	#Config = ConfigParser.ConfigParser()
-	#Config.read("C:\\Users\\Neil\\Documents\\GitHub\\growControl\\growControl.config")
-	#sectionNames = Config.sections()
-	#for ii in sectionNames:
-	#	name = sectionNames[ii][:-3]
-	#	number = int(sectionNames[ii][-3:])
-	#	if name == "temp":
-	#		id = number
-	#		pin = int(ConfigSectionMap(sectionNames[ii])['pin'])
-	#		type = int(ConfigSectionMap(sectionNames[ii])['type']
-	#		tempSensors(append(tempSensor(number,pin,type,)))
-	#
+	def ConfigSectionMap(section):
+		dict1 = {}
+		options = Config.options(section)
+		for option in options:
+			try:
+				dict1[option] = Config.get(section, option)
+				if dict1[option] == -1:
+					DebugPrint("skip: %s" % option)
+			except:
+				print("exception on %s!" % option)
+				dict1[option] = None
+		return dict1
+    
+	inputs = []
+	outputs = []
+	
+	Config = ConfigParser.ConfigParser()
+	
+	try:
+		configFile = '/home/pi/git/growControl/growControl.config' 
+		#configFile = 'C:\\Users\\Neil\\Documents\\GitHub\\growControl\\growControl.config'
+		Config.read(configFile)
+		
+	except IOError as e:
+		print "io error"
+		errorDisplay("I/O error({0}): {1}".format(e.errno, e.strerror))
+	except:
+		print "unknown exception"
+		errorDisplay("Error reading file " + + " in growControl")
+	print "Devices found in the file:"
+	sectionNames = Config.sections()
+	print sectionNames
+
+	for ii in range(len(sectionNames)):
+		name = sectionNames[ii][:-3]
+		number = int(sectionNames[ii][-3:])
+		if name == "temp":
+			id = number
+			pin = int(ConfigSectionMap(sectionNames[ii])['pin'])
+			sensorType = ConfigSectionMap(sectionNames[ii])['sensor_type']
+			libraryPath = ConfigSectionMap(sectionNames[ii])['library_path']
+			inputs.append(tempSensor(number,pin,sensorType, libraryPath))
+
+	return [inputs,outputs]
 	
 		
 def readStatus(devices):
 #read the status of the devices
 #devices must have the self.update() method
-	for deviceGrp in range(len(devices)):
-		#print "readStatus - deviceGrp: " + str(deviceGrp)
-		for device in range(len(devices[deviceGrp])):
-			#print "readStatus - device: " + str(device)
-			devices[deviceGrp][device].update()
+
+	for device in range(len(devices)):
+		#print "readStatus - device: " + str(device)
+		devices[device].update()
 		
 def deviceControl(devices,control,theTime,GPIO):
 	#print "In deviceControl"
-	for deviceGrp in range(len(devices)):
-		#print "deviceControl - deviceGrp: " + str(deviceGrp)
-		for device in range(len(devices[deviceGrp])):
-			#print "deviceControl - device: " + str(device)
-			devices[deviceGrp][device].control(devices,control,GPIO)
+
+	for device in range(len(devices)):
+		#print "deviceControl - device: " + str(device)
+		devices[device].control(devices,control,GPIO)
 		
 def writeStatus(devices,fileName,theDateTime):
 # this function goes over all the devices and writes their status to the output file.
 # expects a list of lists of devices, each device must have the method returnStatusString()
 	statusOut = theDateTime + "," #start each line with the date/time
-	for deviceGrp in range(len(devices)): #loop over each device group
-		for device in range(len(devices[deviceGrp])): # loop over each device in the group
-			#print "writeStatus - deviceGrp: " + str(deviceGrp) + "  device: " + str(device) #debug
-			#print str(devices[deviceGrp][device].growType)
-			statusOut=statusOut + devices[deviceGrp][device].returnStatusString() + "," # add the status to the string
+
+	for device in range(len(devices)): # loop over each device in the group
+		statusOut=statusOut + devices[device].returnStatusString() + "," # add the status to the string
 	
 	
 	outFile = open(fileName,"a") #open the file for appending
@@ -96,9 +109,8 @@ def initFile(devices,control):
 # This function reads in the headers defined in the object definition for the column headers
 # writes device.reportItemHeaders() to the given file
 	headersOut = "Date and Time (YYYY-MM-DD-HH:MM:SS):,"
-	for deviceGrp in range(len(devices)): #loop over each device group
-		for device in range(len(devices[deviceGrp])): # loop over each device in the group
-			headersOut=headersOut + devices[deviceGrp][device].reportItemHeaders + "," # add the status to the string
+	for device in range(len(devices)): # loop over each device in the group
+		headersOut=headersOut + devices[device].reportItemHeaders + "," # add the status to the string
 	
 	control.fileHeaders = headersOut
 	outFile = open(control.fileName,"a") #open the file for appending
@@ -108,10 +120,8 @@ def initFile(devices,control):
 def initializeAllDevices(devices,GPIO):
 # call the initGPIO on all the devices
 	curEpochTime = getDateTime(0,0,1,0)
-	for deviceGrp in range(len(devices)): #loop over each device group
-		for device in range(len(devices[deviceGrp])): # loop over each device in the group
-			devices[deviceGrp][device].initGPIO(GPIO,curEpochTime)
-	
+	for device in range(len(devices)):
+		devices[device].initGPIO(GPIO,curEpochTime)
 def getDateTime(d,t,s,iso):
 	#returns the date and or time
 	# if date ==1 return the date
@@ -159,9 +169,11 @@ def getMinuteDiff(timeToCompare):
 
 def errorDisplay(t):
 	# cleanish way to call out an error in interactive mode 
+	print ""
 	print "!!!!!--ERROR--!!!!!"
 	print t
 	print "!!!!!--ERROR--!!!!!"
+	print ""
 	
 ##########	
 #Class Definitions
@@ -384,7 +396,7 @@ class tempSensor:
 	# update(): reads the sensor
 	# returnStatusString(): returns a string of the last recorded data
 	
-	def __init__(self, sensorNumber, pin, sensorType, sensorLibrary):
+	def __init__(self, sensorNumber, pin, sensorType, sensorLibraryPath):
 		##########
 		#configurable values
 		##########
@@ -393,11 +405,18 @@ class tempSensor:
 		self.lastTemp = -9999 #set to the last measured temperature, init at impossible value, value in C
 		self.lastHumd = -9999 #set the the last measured humidity, init at impossible value, value in %
 		self.sensorType = sensorType
-		self.sensorLibrary = sensorLibrary #library that is called to read the sensor, needed for Adafruit stuff
 		self.iteratationsToVal = -9999
 		##########
 		#hard coded but configurable in source code
 		##########
+		try:
+			import sys
+			sys.path.append(sensorLibraryPath)
+			import Adafruit_DHT #import the AdaFruit libraries
+			self.sensorLibrary = Adafruit_DHT #library that is called to read the sensor, needed for Adafruit stuff
+
+		except:
+			print "Error importing Adafruit_DHT from path: " + sensorLibraryPath + " for temp sensor number " + str(self.id) + " on pin " + str(self.pin)
 		self.reportItemHeaders = "Temp Sensor:" + str(self.id) + "  On Pin:" + str(self.pin) + "," + "Humidity Sensor:" + str(self.id) + "  On Pin:" + str(self.pin) + "," + "Iterations to Get a Value on Pin:" + str(self.pin)
 		self.growType = "tempSensor"
 		self.retries = 5 # number of times to attempt to read before giving update
@@ -453,18 +472,18 @@ class control:
 	def check(self):
 		# check to make sure that everything is within the extremes 
 		print "Should probably check the extremes here"
-		print "Max number of iterations " + str(self.fileLength) 
-		print "Current iteration Number" + str(self.iterations)
+		print "Max iterations " + str(self.fileLength) 
+		print "Current iteration " + str(self.iterations)
 		# update the file name if it is too long
 		if self.iterations > self.fileLength:
-			print "Too Many iterations, creating new file"
+			print "At iteration limit for file length, creating new file..."
 			self.fileName = self.baseFileName + getDateTime(0,0,0,1) + ".csv"
 			self.iterations = 1 #reset the counter
 			outFile = open(self.fileName,"a") #open the file for appending
 			outFile.write(self.fileHeaders + "\n") #append the file with the data
 			outFile.close() #close the file
 		else: 
-			print "Under limit of iterations"
+			#print "Under limit of iterations"
 			self.iterations = self.iterations + 1 #add to the counter
 		
 		
