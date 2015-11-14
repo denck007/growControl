@@ -44,3 +44,6 @@ Temporary Items
 
 #compiled python files
 *.pyc
+
+#local test files
+*__TEST.*
