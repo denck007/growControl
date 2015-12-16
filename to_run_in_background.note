@@ -1,0 +1,11 @@
+ 
+ 
+run command: 
+	chmod +x growControlMain.py
+	# this runs the script in the background and redirects output to the >*.log file and errors to 2>*.err
+	nohup python /home/pi/growControl/growControlMain.py >growControl.log 2>growControl.err&
+
+to find the process:
+	ps ax | grep growControlMain.py 
+	
+	

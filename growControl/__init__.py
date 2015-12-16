@@ -28,10 +28,10 @@ def deviceControl(devices,control,theTime,GPIO):
 		#print "deviceControl - device: " + str(device)
 		devices[device].control(devices,control,GPIO)
 		
-def writeStatus(devices,fileName,theDateTime):
+def writeStatus(devices,fileName,theDateTime, epochTime):
 # this function goes over all the devices and writes their status to the output file.
 # expects a list of lists of devices, each device must have the method returnStatusString()
-	statusOut = theDateTime + "," #start each line with the date/time
+	statusOut = theDateTime + "," + str(epochTime) + "," #start each line with the date/time
 
 	for device in range(len(devices)): # loop over each device in the group
 		statusOut=statusOut + devices[device].returnStatusString() + "," # add the status to the string
@@ -44,7 +44,7 @@ def writeStatus(devices,fileName,theDateTime):
 def initFile(devices,control):
 # This function reads in the headers defined in the object definition for the column headers
 # writes device.reportItemHeaders() to the given file
-	headersOut = "Date and Time (YYYY-MM-DD-HH:MM:SS):,"
+	headersOut = "Date and Time (YYYY-MM-DD-HH:MM:SS):,Date and Time epoch,"
 	for device in range(len(devices)): # loop over each device in the group
 		headersOut=headersOut + devices[device].reportItemHeaders + "," # add the status to the string
 	
@@ -111,4 +111,10 @@ def errorDisplay(t):
 	print t
 	print "!!!!!--ERROR--!!!!!"
 	print ""
-	
+
+def outputException(fileName, e):
+	print e
+	print type(e)
+	outFile = open(fileName,"a") #open the file for appending
+	outFile.write(e) #append the file with the data
+	outFile.close() #close the file

@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 # This is the main file for growControl
 
 import sys
@@ -35,16 +37,17 @@ try:
 		print "Running deviceControl"
 		gc.deviceControl(setableDevices,control, gc.getDateTime(0,0,1,0),GPIO) #time in is epoch
 		print "Running writeStatus"
-		gc.writeStatus(inputDevices+setableDevices,control.fileName, gc.getDateTime(1,1,0,0))
+		gc.writeStatus(inputDevices+setableDevices,control.fileName, gc.getDateTime(1,1,0,0), gc.getDateTime(0,0,1,0))
 		print "Going to sleep"
 		sleep(control.recordInterval)
 			
 except KeyboardInterrupt:
 	# allow the user to end program with CTRL+C
 	gc.errorDisplay("User Initiated Quit")
-except:
+except Exception as e:
 	# If there are any errors, this should catch them
 	gc.errorDisplay("Unhandeled Exception: " + str(sys.exc_info()[0]))
+	gc.outputException(control.fileName, e)
 finally:
 	# Reset GPIO settings
 	GPIO.cleanup()
