@@ -2,8 +2,6 @@ import time
 #import utils
 from growControl.utils import CircularBuffer
 
-
-
 class Sensor(object):
     '''
     Defines the common components of a sensor. All sensors devices should inherit from this
@@ -19,48 +17,45 @@ class Sensor(object):
         self.average_over = int(config['average_over_samples'])
         
         self.parent = parent
-        self.outfile = parent.outfile
-
-        self.last_save = 0.0
-        self.current_value = None
+        self.value = None
 
         self.buffer = CircularBuffer(self.average_over)
-    
+
     def _read_sensor(self):
         '''
         This class must be defined for each sensor
-        This method must return a numeric value
+        This method updates the internal variable self.value
         '''
         print("The _read_sensor class must be defined in the subclass")
         return None
 
     def update(self):
         '''
-        Read the sensor value and add it to the devices history
+        Call the sensor device's read value
+        Update the rolling average and the self.value variable
+        This method must be called constantly to keep the data up to date
         '''
         # read in the sensor value, calculate the moving average, then call save function
-        # The save function deals with the timing of the save
-        self.buffer.update(self._read_sensor())
-        self.current_value = self.buffer.average
-        self.save()
+        value = self._read_sensor()
+        self.buffer.update(value)
+        self.value = self.buffer.average
 
-        self.parent.ph = self.current_value
-
-
-    def save(self):
+    def report_data(self):
         '''
-        Saves the current value to a csv file if the appropriate time has elapsed
+        Output a dict that can be passed up the chain for outputing the data
         '''
+        data = {"name":self.name,
+                "type":self.type,
+                "value":self.value}
+        return data
 
-        if time.time() - self.last_save > self.save_every:
-            with open(self.outfile,'a') as f:
-                f.write("{},{}\n".format(self.name,self.current_value))
-            self.last_save = time.time()
 
-
-class SensorPh(Sensor):
+class SensorPh_ADS1115(Sensor):
     '''
     Defines a ph sensor
+    Is indended to be a BNC type sensor with 59.7mV/ph unit sensor
+    This sensor is expected to be hooked up to an ADS1115 ACD with programable gain.
+    Other ADCs will need to 
     '''
     def __init__(self,config,parent):
 
@@ -73,12 +68,14 @@ class SensorPh(Sensor):
         self.differential_input2 = config['differential_input2']
 
         super().__init__(config,parent)
-
-        print("Sensor {} outfile: {}".format(self.name,self.outfile))
         
     def _read_sensor(self):
         '''
         device specific implementation of this sensor
         This overrides Sensor._read_sensor()
         '''
+        print("\t\tIn read sensor for {}".format(self.name))
+        return 1
+
+
 

@@ -12,7 +12,8 @@ pH sensing/control happens at the pot level. Light control happens at the zone l
 This means that zones need to be aware of their parents and children
 '''
 
-from growControl.Sensors import SensorPh
+from growControl.Sensors import SensorPh_ADS1115
+import time
 
 class Environment:
     '''
@@ -27,21 +28,25 @@ class Environment:
         self.name = config["name"]
         self.type = config["type"]
         self.parent = parent
-        self.outfile = parent.outfile
 
-        self.temperature = None
-        self.ph = None
-        self.humidity = None
+        # If a control frequency is set then record it, if not set it to None
+        if "control_frequency" in config:
+            self.control_frequency = float(config["control_frequency"])
+        else:
+            self.control_frequency = None
+        self.last_run_control =  0.
+
         self.children = []
-
         children = config["children"]
         for child in children:
             child_type = children[child]["type"]
 
             if child_type == "Pot":
                 self.children.append(Pot(children[child],self))
-            elif child_type == "SensorPh":
-                self.children.append(SensorPh(children[child],self))
+            elif child_type == "SensorPh_ADS1115":
+                self.children.append(SensorPh_ADS1115(children[child],self))
+            else:
+                print("Item {} with type {} is not defined in the Environment class".format(children[child]["name"],child_type))
 
     def run_control(self):
         '''
@@ -51,12 +56,31 @@ class Environment:
         '''
         print("Need to implement run_control for a subclass of Environment")
 
-    def _save_state(self):
+    def update(self):
         '''
-        Save the state to what ever the output is
-        Should only need to be implemented here
+        Update the state of the system by calling the update() method of all children
+            This means that all children must have an update method, even if it does nothing
+        Read all sensors then run all controls
         '''
-        print("In Environment._save_state()")
+        for child in self.children:
+            child.update()
+        
+        # If the control frequency is set it has been atleast that amount of time, then run the control function
+        if self.control_frequency is not None:
+            if self.last_run_control + self.control_frequency >= time.time():
+                self.run_control()
+                self.last_run_control = time.time()
+
+    def report_data(self):
+        '''
+        Output a dict that can be passed up the chain for outputing the data
+        '''
+        # get all of the children's data
+        data = {}
+        for child in self.children:
+            data[child.name] = child.report_data()
+        
+        return data
         
 
 class Zone(Environment):
