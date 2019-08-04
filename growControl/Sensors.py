@@ -17,7 +17,7 @@ class Sensor(object):
         self.average_over = int(config['average_over_samples'])
         
         self.parent = parent
-        self.value = None
+        self._value = None
 
         self.buffer = CircularBuffer(self.average_over)
 
@@ -38,7 +38,17 @@ class Sensor(object):
         # read in the sensor value, calculate the moving average, then call save function
         value = self._read_sensor()
         self.buffer.update(value)
-        self.value = self.buffer.average
+        self._value = self.buffer.average
+    
+    @property
+    def value(self):
+        '''
+        Return the value of the sensor
+        This @property is created so that the object requesting this value can get it in a consistent way
+        https://www.programiz.com/python-programming/property
+        '''
+        return self._value
+
 
     def report_data(self):
         '''

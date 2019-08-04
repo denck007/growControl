@@ -6,6 +6,17 @@
       "pot1": {
         "type": "Pot",
         "name": "Pot1",
+        "Controls": {
+          "pot1_ControlPh": {
+            "type": "ControlPh",
+            "name": "Pot1 Control Ph",
+            "SensorPh_name": "pot1_ph",
+            "ControlPh_up_name": "pot1_ph_up",
+            "ControlPh_down_name": "pot1_ph_down",
+            "targetValue": 6.0,
+            "targetRange": 0.2
+          }
+        },
         "children": {
           "temperature": {
             "type": "SensorTemperature",
@@ -17,7 +28,7 @@
             "name": "pot1_ph",
             "bus_address": "0x48",
             "save_every_seconds": 60,
-            "average_over_samples": 5,
+            "average_over_samples": 30,
             "ads1115_gain": 8,
             "ads1115_data_sample_rate": 8,
             "differential_input1": "P0",
@@ -47,6 +58,17 @@
       "pot1": {
         "type": "Pot",
         "name": "Pot1",
+        "Controls": {
+          "pot1_ControlPh": {
+            "type": "ControlPh",
+            "name": "Pot1 Control Ph",
+            "SensorPh_name": "pot1_ph",
+            "ControlPh_up_name": "pot1_ph_up",
+            "ControlPh_down_name": "pot1_ph_down",
+            "targetValue": 6.0,
+            "targetRange": 0.2
+          }
+        },
         "children": {
           "temperature": {
             "type": "SensorTemperature",
