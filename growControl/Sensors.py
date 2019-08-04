@@ -88,4 +88,6 @@ class SensorPh_ADS1115(Sensor):
         return 1
 
 
+ImplementedSensors = {"SensorPh_ADS1115":SensorPh_ADS1115}
+
 

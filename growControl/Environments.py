@@ -11,8 +11,8 @@ pH sensing/control happens at the pot level. Light control happens at the zone l
 
 This means that zones need to be aware of their parents and children
 '''
-
-from growControl.Sensors import SensorPh_ADS1115
+from growControl import Sensors as Sensors
+from growControl import Controls as Controls
 import time
 
 class Environment:
@@ -36,17 +36,20 @@ class Environment:
             self.control_frequency = None
         self.last_run_control =  0.
 
-        self.children = []
+        self.children = {}
         children = config["children"]
         for child in children:
             child_type = children[child]["type"]
 
-            if child_type == "Pot":
-                self.children.append(Pot(children[child],self))
-            elif child_type == "SensorPh_ADS1115":
-                self.children.append(SensorPh_ADS1115(children[child],self))
+            if child_type in ImplementedEnvironments:
+                self.children[children[child]["name"]] = ImplementedEnvironments[child_type](children[child],self)
+            elif child_type in Sensors.ImplementedSensors:
+                self.children[children[child]["name"]] = Sensors.ImplementedSensors[child_type](children[child],self)
+            elif child_type in Controls.ImplementedControls:
+                self.children[children[child]["name"]] = Controls.ImplementedControls[child_type](children[child],self)
             else:
-                print("Item {} with type {} is not defined in the Environment class".format(children[child]["name"],child_type))
+                print("Did not find implementation for item with name: {} type: {}\n\t".format(config["name"],child_type) +
+                    "It may not be implemented or may not have been added to the .ImplementedX in the corresponding file")
 
     def run_control(self):
         '''
@@ -104,3 +107,6 @@ class Pot(Environment):
         print("\tCreating Pot " + config["name"])
         super().__init__(config,parent)
 
+
+ImplementedEnvironments = {"Zone":Zone,
+                            "Pot":Pot}
