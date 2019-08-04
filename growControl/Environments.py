@@ -11,8 +11,9 @@ pH sensing/control happens at the pot level. Light control happens at the zone l
 
 This means that zones need to be aware of their parents and children
 '''
-from growControl import Sensors as Sensors
-from growControl import Controls as Controls
+from growControl import Sensors
+from growControl import Controls
+from growControl import utils
 import time
 
 class Environment:
@@ -36,20 +37,7 @@ class Environment:
             self.control_frequency = None
         self.last_run_control =  0.
 
-        self.children = {}
-        children = config["children"]
-        for child in children:
-            child_type = children[child]["type"]
-
-            if child_type in ImplementedEnvironments:
-                self.children[children[child]["name"]] = ImplementedEnvironments[child_type](children[child],self)
-            elif child_type in Sensors.ImplementedSensors:
-                self.children[children[child]["name"]] = Sensors.ImplementedSensors[child_type](children[child],self)
-            elif child_type in Controls.ImplementedControls:
-                self.children[children[child]["name"]] = Controls.ImplementedControls[child_type](children[child],self)
-            else:
-                print("Did not find implementation for item with name: {} type: {}\n\t".format(config["name"],child_type) +
-                    "It may not be implemented or may not have been added to the .ImplementedX in the corresponding file")
+        self.children = utils.BuildChildren(config,self)
 
     def run_control(self):
         '''

@@ -1,5 +1,5 @@
 import time
-#import utils
+from growControl import utils
 from growControl.utils import CircularBuffer
 
 class Sensor(object):
@@ -20,6 +20,9 @@ class Sensor(object):
         self._value = None
 
         self.buffer = CircularBuffer(self.average_over)
+
+        if "children" in config:
+            self.children = utils.BuildChildren(config,self)
 
     def _read_sensor(self):
         '''
