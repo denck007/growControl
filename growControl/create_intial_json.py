@@ -24,16 +24,19 @@ Pot1_ControlPh= {"type":"ControlPh", # The object type we are creating
                 "ControlPh_up_name":"Pot1_Ph_up", # The name of the oject that runs ph up
                 "ControlPh_down_name":"Pot1_Ph_down", # The name of the oject that runs ph down
                 "targetValue":6.0, # the ph value we are targeting
-                "targetRange":0.2 # +/- tolerance on targetValue. targetValue=6 w/ targetRange=0.2 => control to 5.8-6.2
+                "targetRange":0.2, # +/- tolerance on targetValue. targetValue=6 w/ targetRange=0.2 => control to 5.8-6.2
+                "directly_controllable":True # sets if the object has its own control algorithm, or if it is in another objects control algorithm
                 }
-Pot1_Ph_up = {"type":"ControlPeristalticPump","name":"Pot1_Ph_up"}
-Pot1_Ph_down = {"type":"ControlPeristalticPump","name":"Pot1_Ph_down"}
+Pot1_Ph_up = {"type":"ControlPeristalticPump","name":"Pot1_Ph_up","directly_controllable":False}
+Pot1_Ph_down = {"type":"ControlPeristalticPump","name":"Pot1_Ph_down","directly_controllable":False}
 
-pot1_Controls = {"pot1_ControlPh":Pot1_ControlPh}
-pot1_children = {"temperature":pot1_temp,"pot1_ph":Pot1_ph}
+pot1_children = {"temperature":pot1_temp,
+                "pot1_ph":Pot1_ph,
+                "Pot1_ControlPh":Pot1_ControlPh,
+                "Pot1_Ph_down":Pot1_Ph_down,
+                "Pot1_Ph_up":Pot1_Ph_up}
 pot1 = {"type":"Pot",
         "name":"Pot1",
-        "Controls":pot1_Controls,
         "children":pot1_children}
 
 temperature_environment = {"type":"SensorTemperature",
@@ -43,9 +46,9 @@ temperature_environment = {"type":"SensorTemperature",
 children = {"pot1":pot1,
             "temperature_environment":temperature_environment}
 zone1 = {"type":"Zone","name":"Zone1","children":children}
-zone2 = {"type":"Zone","name":"Zone2","children":children}
+#zone2 = {"type":"Zone","name":"Zone2","children":children}
 
-world = {"zone1":zone1,"zone2":zone2,"outfile":"dataout.json"}
+world = {"name":"world","type":"World","outfile":"dataout.json","children":{"zone1":zone1}}
 
 with open("setup.json",'w') as f:
     json.dump(world,f,indent=2)
