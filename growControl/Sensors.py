@@ -1,28 +1,27 @@
 import time
 from growControl import utils
 from growControl.utils import CircularBuffer
+from growControl import GrowObject
 
-class Sensor(object):
+class Sensor(GrowObject.GrowObject):
     '''
     Defines the common components of a sensor. All sensors devices should inherit from this
     '''
-    def __init__(self,config,parent):
+    def __init__(self,config):
         '''
         params is a dictionary of parameters to setup a sensor.
         '''
-
-        self.type = config["type"]
-        self.name = config['name']
         self.save_every = int(config['save_every_seconds'])
         self.average_over = int(config['average_over_samples'])
-        
-        self.parent = parent
+
         self._value = None
 
         self.buffer = CircularBuffer(self.average_over)
 
-        if "children" in config:
-            self.children = utils.BuildChildren(config,self)
+        # Sensors are not controllable, as they have no control function
+        self.directly_controllable = False
+
+        super().__init__(config)
 
     def _read_sensor(self):
         '''
@@ -42,6 +41,7 @@ class Sensor(object):
         value = self._read_sensor()
         self.buffer.update(value)
         self._value = self.buffer.average
+
     
     @property
     def value(self):
@@ -52,17 +52,6 @@ class Sensor(object):
         '''
         return self._value
 
-
-    def report_data(self):
-        '''
-        Output a dict that can be passed up the chain for outputing the data
-        '''
-        data = {"name":self.name,
-                "type":self.type,
-                "value":self.value}
-        return data
-
-
 class SensorPh_ADS1115(Sensor):
     '''
     Defines a ph sensor
@@ -70,7 +59,7 @@ class SensorPh_ADS1115(Sensor):
     This sensor is expected to be hooked up to an ADS1115 ACD with programable gain.
     Other ADCs will need to 
     '''
-    def __init__(self,config,parent):
+    def __init__(self,config):
 
         print("\t\tIn SensorPh.__init__()")
 
@@ -80,7 +69,7 @@ class SensorPh_ADS1115(Sensor):
         self.differential_input1 = config['differential_input1']
         self.differential_input2 = config['differential_input2']
 
-        super().__init__(config,parent)
+        super().__init__(config)
         
     def _read_sensor(self):
         '''

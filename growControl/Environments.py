@@ -14,22 +14,19 @@ This means that zones need to be aware of their parents and children
 from growControl import Sensors
 from growControl import Controls
 from growControl import utils
+from growControl import GrowObject
 import time
 
-class Environment:
+class Environment(GrowObject.GrowObject):
     '''
     The base class for all environments.
     Defines basics of an environment
     '''
 
-    def __init__(self,config,parent):
+    def __init__(self,config):
         '''
 
         '''
-        self.name = config["name"]
-        self.type = config["type"]
-        self.parent = parent
-
         # If a control frequency is set then record it, if not set it to None
         if "control_frequency" in config:
             self.control_frequency = float(config["control_frequency"])
@@ -37,7 +34,11 @@ class Environment:
             self.control_frequency = None
         self.last_run_control =  0.
 
-        self.children = utils.BuildChildren(config,self)
+        # Envoronments are not controllable, as they have no control function
+        # To control something in an environment, do so by adding a control object as a child
+        self.directly_controllable = False
+        
+        super().__init__(config)
 
     def run_control(self):
         '''
@@ -47,31 +48,7 @@ class Environment:
         '''
         print("Need to implement run_control for a subclass of Environment")
 
-    def update(self):
-        '''
-        Update the state of the system by calling the update() method of all children
-            This means that all children must have an update method, even if it does nothing
-        Read all sensors then run all controls
-        '''
-        for child in self.children:
-            child.update()
-        
-        # If the control frequency is set it has been atleast that amount of time, then run the control function
-        if self.control_frequency is not None:
-            if self.last_run_control + self.control_frequency >= time.time():
-                self.run_control()
-                self.last_run_control = time.time()
 
-    def report_data(self):
-        '''
-        Output a dict that can be passed up the chain for outputing the data
-        '''
-        # get all of the children's data
-        data = {}
-        for child in self.children:
-            data[child.name] = child.report_data()
-        
-        return data
         
 
 class Zone(Environment):
@@ -80,9 +57,9 @@ class Zone(Environment):
     A zone may be an entire grow room, or just 1 light on a plant depending on the setup
     '''
 
-    def __init__(self,config,parent):
+    def __init__(self,config):
         print("Creating zone " + config["name"])
-        super().__init__(config,parent)
+        super().__init__(config)
 
 
 class Pot(Environment):
@@ -91,9 +68,9 @@ class Pot(Environment):
     This could be a hydroponic tank, soil pot, or a region of a garden that is all watered together.
     IE a pot is an environment where all of the growing medium properties are constant
     '''
-    def __init__(self,config,parent):
+    def __init__(self,config):
         print("\tCreating Pot " + config["name"])
-        super().__init__(config,parent)
+        super().__init__(config)
 
 
 ImplementedEnvironments = {"Zone":Zone,
