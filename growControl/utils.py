@@ -35,27 +35,3 @@ class CircularBuffer(object):
 
     def __len__(self):
         return self.length
-
-def BuildChildren(config,parent):
-    '''
-    Take in the config dict and parent name
-    Return the generated children for the object
-
-    This uses the ImplmentedX dicts in the Environments, Controls, and Sensor files to resolve the 
-        class that is to be created
-    '''
-    children = config["children"]
-    result = {}
-    for child in children:
-        child_type = children[child]["type"]
-
-        if child_type in Environments.ImplementedEnvironments:
-            result[children[child]["name"]] = Environments.ImplementedEnvironments[child_type](children[child],parent)
-        elif child_type in Sensors.ImplementedSensors:
-            result[children[child]["name"]] = Sensors.ImplementedSensors[child_type](children[child],parent)
-        elif child_type in Controls.ImplementedControls:
-            result[children[child]["name"]] = Controls.ImplementedControls[child_type](children[child],parent)
-        else:
-            print("Did not find implementation for item with name: {} type: {}\n\t".format(config["name"],child_type) +
-                "It may not be implemented or may not have been added to the .ImplementedX in the corresponding file")
-    return result
