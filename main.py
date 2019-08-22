@@ -16,6 +16,8 @@ class World:
         # Save the output file name
         # Delete the reference so it is easier to loop over other items in the dict
         self.outfile = config["outfile"]
+        self.main_loop_min_time = config["main_loop_min_time"]
+        self.last_loop = 0.0
         config.pop("outfile")
 
         # Generate all of the objects    
@@ -86,6 +88,16 @@ class World:
         
         return data
 
+    def pause_main_loop(self):
+        '''
+        sleep until at least self.main_loop_min_time has passes since last loop
+        '''
+        time_since_last = time.time()-self.last_loop
+        print("\tSleepTime: {:.5f} ".format(self.main_loop_min_time - time_since_last))
+        delta_to_min = max(self.main_loop_min_time - time_since_last,0)
+        time.sleep(delta_to_min)
+        self.last_loop = time.time()
+
 if __name__ == "__main__":
     # Read in the config file
     with open("setup.json",'r') as f:
@@ -94,14 +106,14 @@ if __name__ == "__main__":
     #world.create_connections()
 
     
-    for ii in range(10):
+    for ii in range(100):
         world.update()
         world.run_controls()
         data = world.report_data()
-
-        print()
+        world.pause_main_loop()
+        #print()
         #print(data)
-        time.sleep(1)
+        #time.sleep(worl)
     
 
 

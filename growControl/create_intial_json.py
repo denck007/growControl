@@ -63,7 +63,11 @@ children = {"pot1":pot1,
 zone1 = {"type":"Zone","name":"Zone1","children":children}
 #zone2 = {"type":"Zone","name":"Zone2","children":children}
 
-world = {"name":"world","type":"World","outfile":"dataout.json","children":{"zone1":zone1}}
+world = {"name":"world",
+        "type":"World",
+        "outfile":"dataout.json",
+        "main_loop_min_time":5.0, # the minimum time between looping over everything, prevents tight loop
+        "children":{"zone1":zone1}}
 
 with open("setup.json",'w') as f:
     json.dump(world,f,indent=2)
