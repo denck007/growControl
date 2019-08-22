@@ -10,7 +10,7 @@ try:
     from adafruit_ads1x15.ads1x15 import Mode
 except:
     print("Could not import board,busio, and adafruit_ads1x15 libraries, must run in debug_from_file mode")
-    
+
 class Sensor(GrowObject.GrowObject):
     '''
     Defines the common components of a sensor. All sensors devices should inherit from this
@@ -32,10 +32,10 @@ class Sensor(GrowObject.GrowObject):
         if "debug_from_file" in config:
             self.debug_from_file = True
             with open(config["debug_from_file"],'r') as f:
-                raw_data = f.readlines()
-            self.debug_data = CircularBuffer([float(x) for x in raw_data])          
+                raw_data = [float(x) for x in f.readlines()]
+            self.debug_data = CircularBuffer(raw_data)
         else:
-            self.debug_from_file = False  
+            self.debug_from_file = False
 
         super().__init__(config)
 
@@ -60,6 +60,8 @@ class Sensor(GrowObject.GrowObject):
             raw_value = self._read_sensor()
             self.buffer.update(raw_value)
         self._value = self.buffer.average
+
+        print("ph: {:.2f}".format(self.value))
     
     @property
     def value(self):
