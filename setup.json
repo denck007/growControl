@@ -2,6 +2,7 @@
   "name": "world",
   "type": "World",
   "outfile": "dataout.json",
+  "main_loop_min_time": 5.0,
   "children": {
     "zone1": {
       "type": "Zone",
@@ -24,28 +25,38 @@
               "average_over_samples": 30,
               "ads1115_gain": 8,
               "ads1115_data_sample_rate": 8,
-              "differential_input1": "P0",
-              "differential_input2": "P1"
+              "single_ended_input_pin": 0,
+              "calibration_pH7_voltage": -0.005,
+              "calibration_pH4_voltage": 0.172,
+              "debug_from_file": "random_ph_data.csv"
             },
             "Pot1_ControlPh": {
               "type": "ControlPh",
               "name": "Pot1 Control Ph",
+              "directly_controllable": true,
+              "minimum_time_between_actions": 3.0,
               "SensorPh_name": "Pot1_Ph",
               "ControlPh_up_name": "Pot1_Ph_up",
               "ControlPh_down_name": "Pot1_Ph_down",
               "targetValue": 6.0,
               "targetRange": 0.2,
-              "directly_controllable": true
+              "mL_per_control": 1.0
             },
             "Pot1_Ph_down": {
               "type": "ControlPeristalticPump",
               "name": "Pot1_Ph_down",
-              "directly_controllable": false
+              "directly_controllable": false,
+              "mL_per_second": 1.0,
+              "GPIO": 27,
+              "debug_from_file": true
             },
             "Pot1_Ph_up": {
               "type": "ControlPeristalticPump",
               "name": "Pot1_Ph_up",
-              "directly_controllable": false
+              "directly_controllable": false,
+              "mL_per_second": 1.0,
+              "GPIO": 17,
+              "debug_from_file": true
             }
           }
         },
