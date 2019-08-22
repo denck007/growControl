@@ -22,7 +22,11 @@ class Control(GrowObject.GrowObject):
         else:
             self.minimum_control_time = 0.0
 
-        
+        if "debug_from_file" in config:
+            self.debug_from_file = True
+        else:
+            self.debug_from_file = False
+
         # set the time for the first control to be performed in minimum_control_time from initialization
         self.action_last = time.time()+self.minimum_control_time
         
@@ -107,10 +111,14 @@ class ControlPeristalticPump(Control):
         Run the pump for the correct amount of time to dispense mL_to_dispense fluid
         '''
 
-        #GPIO.output(self.GPIO,GPIO.HIGH)
+        if self.debug_from_file:
+            time.sleep(mL_to_dispense/self.mL_per_second)
+            return
+
+        GPIO.output(self.GPIO,GPIO.HIGH)
         print("\tSleeping for {:.5f} seconds while dispensing fluid".format(mL_to_dispense/self.mL_per_second))
         time.sleep(mL_to_dispense/self.mL_per_second)
-        #GPIO.output(self.GPIO,GPIO.LOW)
+        GPIO.output(self.GPIO,GPIO.LOW)
 
 
 

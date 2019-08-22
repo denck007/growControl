@@ -2,13 +2,15 @@ import time
 from growControl import utils
 from growControl.utils import CircularBuffer
 from growControl import GrowObject
-
-import board
-import busio
-import adafruit_ads1x15.ads1115 as ADS
-from adafruit_ads1x15.analog_in import AnalogIn
-from adafruit_ads1x15.ads1x15 import Mode
-
+try:
+    import board
+    import busio
+    import adafruit_ads1x15.ads1115 as ADS
+    from adafruit_ads1x15.analog_in import AnalogIn
+    from adafruit_ads1x15.ads1x15 import Mode
+except:
+    print("Could not import board,busio, and adafruit_ads1x15 libraries, must run in debug_from_file mode")
+    
 class Sensor(GrowObject.GrowObject):
     '''
     Defines the common components of a sensor. All sensors devices should inherit from this
@@ -27,6 +29,14 @@ class Sensor(GrowObject.GrowObject):
         # Sensors are not controllable, as they have no control function
         self.directly_controllable = False
 
+        if "debug_from_file" in config:
+            self.debug_from_file = True
+            with open(config["debug_from_file"],'r') as f:
+                raw_data = f.readlines()
+            self.debug_data = CircularBuffer([float(x) for x in raw_data])          
+        else:
+            self.debug_from_file = False  
+
         super().__init__(config)
 
     def _read_sensor(self):
@@ -44,10 +54,12 @@ class Sensor(GrowObject.GrowObject):
         This method must be called constantly to keep the data up to date
         '''
         # read in the sensor value, calculate the moving average, then call save function
-        value = self._read_sensor()
-        self.buffer.update(value)
+        if self.debug_from_file:
+            self.buffer.update(self.debug_data.next())
+        else:
+            raw_value = self._read_sensor()
+            self.buffer.update(raw_value)
         self._value = self.buffer.average
-
     
     @property
     def value(self):
@@ -75,27 +87,29 @@ class SensorPh_ADS1115(Sensor):
         self.single_ended_input_pin = config['single_ended_input_pin']
         super().__init__(config)
 
-        self.i2c = busio.I2C(board.SCL,board.SDA)
-        self.ads = ADS.ADS1115(self.i2c)
-        # Gain for the system: voltage range:
-        # 2/3:6.144V
-        #   1: 4.096V
-        #   2: 2.048V
-        #   4: 1.024V
-        #   8: 0.512V
-        #  16: 0.256V
-        self.ads.gain = self.ads1115_gain
-        self.ads.mode = Mode.CONTINIOUS
-        self.ads.data_rate = self.ads1115_data_sample_rate # datarates in samples/secs:8,16,32,64,128,250,475,860
+        # if we are feeding in data from a text file, then do not activate the 
+        if not self.debug_from_file:
+            self.i2c = busio.I2C(board.SCL,board.SDA)
+            self.ads = ADS.ADS1115(self.i2c)
+            # Gain for the system: voltage range:
+            # 2/3:6.144V
+            #   1: 4.096V
+            #   2: 2.048V
+            #   4: 1.024V
+            #   8: 0.512V
+            #  16: 0.256V
+            self.ads.gain = self.ads1115_gain
+            self.ads.mode = Mode.CONTINIOUS
+            self.ads.data_rate = self.ads1115_data_sample_rate # datarates in samples/secs:8,16,32,64,128,250,475,860
 
-        self.data_stream = AnalogIn(self.ads,self.single_ended_input_pin)
+            self.data_stream = AnalogIn(self.ads,self.single_ended_input_pin)
         
     def _read_sensor(self):
         '''
         device specific implementation of this sensor
         This overrides Sensor._read_sensor()
-        
-        Just return
+
+        If using debug_from_file this is never reached as the parent class will not call this
         '''
         return self.voltage_to_ph(self.data_stream.voltage)
 
