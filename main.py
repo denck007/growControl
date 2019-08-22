@@ -8,6 +8,10 @@ import time
 from growControl import Environments
 from growControl import Sensors
 from growControl import Controls
+try:
+    import RPi.GPIO
+except:
+    print("Could not import RPi.GPIO, you may have to run with debug_from_file")
 
 class World:
     def __init__(self,config):
@@ -99,22 +103,21 @@ class World:
         self.last_loop = time.time()
 
 if __name__ == "__main__":
-    # Read in the config file
-    with open("setup.json",'r') as f:
-        config = json.loads(f.read())
-    world = World(config)
-    #world.create_connections()
+    try:
+        # Read in the config file
+        with open("setup.json",'r') as f:
+            config = json.loads(f.read())
+        world = World(config)
+       
+        for ii in range(100):
+            world.update()
+            world.run_controls()
+            data = world.report_data()
+            world.pause_main_loop()
+    except:
+        GPIO.cleanup()
 
-    
-    for ii in range(100):
-        world.update()
-        world.run_controls()
-        data = world.report_data()
-        world.pause_main_loop()
-        #print()
-        #print(data)
-        #time.sleep(worl)
-    
+        
 
 
     
