@@ -4,6 +4,7 @@ This is the main file for running the grow control system
 '''
 
 import json
+import time
 from growControl import Environments
 from growControl import Sensors
 from growControl import Controls
@@ -98,7 +99,9 @@ if __name__ == "__main__":
         world.run_controls()
         data = world.report_data()
 
-        print(data)
+        print()
+        #print(data)
+        time.sleep(1)
     
 
 
