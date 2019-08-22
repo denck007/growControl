@@ -3,6 +3,12 @@ from growControl import utils
 from growControl.utils import CircularBuffer
 from growControl import GrowObject
 
+import board
+import busio
+import adafruit_ads1x15.ads1115 as ADS
+from adafruit_ads1x15.analog_in import AnalogIn
+from adafruit_ads1x15.ads1x15 import Mode
+
 class Sensor(GrowObject.GrowObject):
     '''
     Defines the common components of a sensor. All sensors devices should inherit from this
@@ -29,7 +35,7 @@ class Sensor(GrowObject.GrowObject):
         This method updates the internal variable self.value
         '''
         print("The _read_sensor class must be defined in the subclass")
-        return None
+        raise NotImplementedError
 
     def update(self):
         '''
@@ -66,18 +72,45 @@ class SensorPh_ADS1115(Sensor):
         self.bus_address = config['bus_address']
         self.ads1115_gain =  config['ads1115_gain']
         self.ads1115_data_sample_rate =  config['ads1115_data_sample_rate']
-        self.differential_input1 = config['differential_input1']
-        self.differential_input2 = config['differential_input2']
-
+        self.single_ended_input_pin = config['single_ended_input_pin']
         super().__init__(config)
+
+        self.i2c = busio.I2C(board.SCL,board.SDA)
+        self.ads = ADS.ADS1115(self.i2c)
+        # Gain for the system: voltage range:
+        # 2/3:6.144V
+        #   1: 4.096V
+        #   2: 2.048V
+        #   4: 1.024V
+        #   8: 0.512V
+        #  16: 0.256V
+        self.ads.gain = self.ads1115_gain
+        self.ads.mode = Mode.CONTINIOUS
+        self.ads.data_rate = self.ads1115_data_sample_rate # datarates in samples/secs:8,16,32,64,128,250,475,860
+
+        self.data_stream = AnalogIn(self.ads,self.single_ended_input_pin)
         
     def _read_sensor(self):
         '''
         device specific implementation of this sensor
         This overrides Sensor._read_sensor()
+        
+        Just return
         '''
-        print("\t\tIn read sensor for {}".format(self.name))
-        return 1
+        return self.voltage_to_ph(self.data_stream.voltage)
+
+    def _calibrate(self, V_at_ph4=.1728, V_at_ph7=0):
+        '''
+        calibrate the sensor based on the voltage readings at ph=4 and ph=7
+        '''
+        self.V2ph_m = (7-4)/(V_at_ph7-V_at_ph4)
+        self.V2ph_b = 7-self.V2ph_m * V_at_ph7
+
+    def voltage_to_ph(self,voltage):
+        '''
+        Given a voltage, return the ph of the sensor
+        '''
+        return self.V2ph_m * voltage + self.V2ph_b
 
 
 ImplementedSensors = {"SensorPh_ADS1115":SensorPh_ADS1115}
