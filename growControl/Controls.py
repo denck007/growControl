@@ -17,18 +17,19 @@ class Control(GrowObject.GrowObject):
         '''
         # Some of the control object are directly controllable, others are turned on by other objects
         self.directly_controllable = config["directly_controllable"]
-        if "minimum_control_time" in config:
-            self.minimum_control_time = config["minimum_control_time"] # minimum amount of time between performing a control action
+        if "minimum_time_between_actions" in config:
+            self.minimum_time_between_actions = config["minimum_time_between_actions"] # minimum amount of time between performing a control action
         else:
-            self.minimum_control_time = 0.0
+            self.minimum_time_between_actions = 0.0
 
         if "debug_from_file" in config:
             self.debug_from_file = True
         else:
             self.debug_from_file = False
 
-        # set the time for the first control to be performed in minimum_control_time from initialization
-        self.action_last = time.time()+self.minimum_control_time
+        # set the time for the first control to be performed in minimum_time_between_actions from initialization
+        # This will force the first control to be 2*self.minimum_time_between_actions before first control action
+        self.action_last = time.time()+self.minimum_time_between_actions
         
         super().__init__(config)
 
@@ -75,19 +76,19 @@ class ControlPh(Control):
         '''
 
         '''
-        print("time: {:.1f} next control time: {:.1f}".format(time.time(),self.action_last+self.minimum_control_time))
-        if (time.time() - self.minimum_control_time) < self.action_last:
+        #print("time: {:.1f} next control time: {:.1f}".format(time.time(),self.action_last+self.minimum_time_between_actions))
+        if (time.time() - self.minimum_time_between_actions) < self.action_last:
             # It has not been long enough since last control to run the action again
-            print("In controlPh, it has not been long enough since last control point")
+            #print("In controlPh, it has not been long enough since last control point")
             return
         
         current_pH = self.SensorPh.value
         if current_pH > (self.targetValue + self.targetRange):
-            print("ph is {} which is over the max of {:.2f}+{:.2f}={:.2f}".format(current_pH,self.targetValue,self.targetRange,self.targetValue-self.targetRange))
+            print("{:.1f} ph is {:.2f} which is over the max of {:.2f}+{:.2f}={:.2f}".format(time.time(),current_pH,self.targetValue,self.targetRange,self.targetValue+self.targetRange))
             self.ControlPh_down.run_mL(self.mL_per_control)
             self.action_last = time.time()
         elif current_pH < (self.targetValue - self.targetRange):
-            print("ph is {} which is under the max of {:.2f}-{:.2f}={:.2f}".format(current_pH,self.targetValue,self.targetRange,self.targetValue-self.targetRange))
+            print("{:.1f} ph is {:.2f} which is under the max of {:.2f}-{:.2f}={:.2f}".format(time.time(),current_pH,self.targetValue,self.targetRange,self.targetValue-self.targetRange))
             self.ControlPh_up.run_mL(self.mL_per_control)
             self.action_last = time.time()
 
@@ -110,13 +111,13 @@ class ControlPeristalticPump(Control):
         '''
         Run the pump for the correct amount of time to dispense mL_to_dispense fluid
         '''
-
+        print("\tSleeping for {:.5f} seconds while dispensing fluid for {}".format(mL_to_dispense/self.mL_per_second,self.name))
         if self.debug_from_file:
             time.sleep(mL_to_dispense/self.mL_per_second)
             return
 
         GPIO.output(self.GPIO,GPIO.HIGH)
-        print("\tSleeping for {:.5f} seconds while dispensing fluid".format(mL_to_dispense/self.mL_per_second))
+        
         time.sleep(mL_to_dispense/self.mL_per_second)
         GPIO.output(self.GPIO,GPIO.LOW)
 

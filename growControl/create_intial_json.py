@@ -17,13 +17,13 @@ Pot1_ph = {"type":"SensorPh_ADS1115", # The name of the python class to use
             "single_ended_input_pin":0, # The pin on the ADC to read for the pH P0=0,P1=1 etc
             "calibration_pH7_voltage":-0.005, # Volts at ph=7
             "calibration_pH4_voltage":0.172, # Volts at ph=4
-            "debug_from_file":"ph_sensor_fake_data.csv" # datafile to stream instead of reading probe
+            "debug_from_file":"random_ph_data.csv" # datafile to stream instead of reading probe
             }
 
 Pot1_ControlPh= {"type":"ControlPh", # The object type we are creating
                 "name":"Pot1 Control Ph", # What to call it in the output
                 "directly_controllable":True, # sets if the object has its own control algorithm, or if it is in another objects control algorithm
-                "minimum_control_time":3.0, # Minimum amount of time between actions for this control
+                "minimum_time_between_actions":3.0, # Minimum amount of time between actions for this control
                 "SensorPh_name":"Pot1_Ph", # Item that it needs information from
                 "ControlPh_up_name":"Pot1_Ph_up", # The name of the oject that runs ph up
                 "ControlPh_down_name":"Pot1_Ph_down", # The name of the oject that runs ph down
