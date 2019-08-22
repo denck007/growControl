@@ -11,19 +11,18 @@ class CircularBuffer(object):
         '''
         Creates a circular buffer with length 10
         '''
+        
+        self.sum = 0.
+        self.average = 0
+        self.current_location = 0
         if type(data) is int:
             self.length = data
-            self.data = [0]*data
-            self.sum = 0.
-            self.average = 0
+            self.data = [0]*self.length
         elif type(data) is list:
             self.length = len(data)
-            self.data = data
-            self.sum = 0
-            for item in self.data:
-                self.sum += item
-            self.average = self.sum/self.length
-        self.current_location = 0
+            self.data = [0]*self.length
+            for item in data:
+                self.update(item) # use existing method to add in and not repeat calcs
 
     def update(self,value):
         '''
