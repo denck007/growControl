@@ -1,0 +1,60 @@
+{
+  "name": "world",
+  "type": "World",
+  "outfile": "dataout.json",
+  "children": {
+    "zone1": {
+      "type": "Zone",
+      "name": "Zone1",
+      "children": {
+        "pot1": {
+          "type": "Pot",
+          "name": "Pot1",
+          "children": {
+            "temperature": {
+              "type": "SensorTemperature",
+              "name": "pot1_temp",
+              "comms_address": "0x40"
+            },
+            "pot1_ph": {
+              "type": "SensorPh_ADS1115",
+              "name": "Pot1_Ph",
+              "bus_address": "0x48",
+              "save_every_seconds": 60,
+              "average_over_samples": 30,
+              "ads1115_gain": 8,
+              "ads1115_data_sample_rate": 8,
+              "differential_input1": "P0",
+              "differential_input2": "P1"
+            },
+            "Pot1_ControlPh": {
+              "type": "ControlPh",
+              "name": "Pot1 Control Ph",
+              "SensorPh_name": "Pot1_Ph",
+              "ControlPh_up_name": "Pot1_Ph_up",
+              "ControlPh_down_name": "Pot1_Ph_down",
+              "targetValue": 6.0,
+              "targetRange": 0.2,
+              "directly_controllable": true
+            },
+            "Pot1_Ph_down": {
+              "type": "ControlPeristalticPump",
+              "name": "Pot1_Ph_down",
+              "directly_controllable": false
+            },
+            "Pot1_Ph_up": {
+              "type": "ControlPeristalticPump",
+              "name": "Pot1_Ph_up",
+              "directly_controllable": false
+            }
+          }
+        },
+        "temperature_environment": {
+          "type": "SensorTemperature",
+          "name": "temperature_environment",
+          "comms_address": "0x40"
+        }
+      }
+    }
+  }
+}
