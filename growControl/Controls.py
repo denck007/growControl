@@ -3,7 +3,10 @@
 #from growControl import utils
 from growControl import GrowObject
 import time
-#import RPi.GPIO as GPIO
+try:
+    import RPi.GPIO as GPIO
+except:
+    print("Error importing RPi.GPIO, may need to run with fake data")
 
 class Control(GrowObject.GrowObject):
     '''

@@ -5,13 +5,15 @@ This is the main file for running the grow control system
 
 import json
 import time
+import sys
+
 from growControl import Environments
 from growControl import Sensors
 from growControl import Controls
 try:
     import RPi.GPIO
 except:
-    print("Could not import RPi.GPIO, you may have to run with debug_from_file")
+    print("Error importing RPi.GPIO, may need to run with fake data")
 
 class World:
     def __init__(self,config):
@@ -116,6 +118,10 @@ if __name__ == "__main__":
             world.pause_main_loop()
     except:
         GPIO.cleanup()
+        print("Unexpected error:", sys.exc_info()[0])
+        raise
+
+        
 
         
 
