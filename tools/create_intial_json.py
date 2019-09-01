@@ -14,8 +14,8 @@ Pot1_ph = {"type":"SensorPh_ADS1115", # The name of the python class to use
             "ads1115_gain":8, # The gain to use from the ads1115, 
             "ads1115_data_sample_rate":8, # the sample rate from ads1115, note that the device will average the analog input since the last reading
             "single_ended_input_pin":0, # The pin on the ADC to read for the pH P0=0,P1=1 etc
-            "calibration_pH7_voltage":-0.005, # Volts at ph=7
-            "calibration_pH4_voltage":0.172, # Volts at ph=4
+            "calibration_pH7_voltage":-0.01315, # Volts at ph=7
+            "calibration_pH4_voltage":0.1550, # Volts at ph=4
             #"debug_from_file":"random_ph_data.csv" # datafile to stream instead of reading probe
             }
 

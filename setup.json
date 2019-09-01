@@ -21,8 +21,8 @@
               "ads1115_gain": 8,
               "ads1115_data_sample_rate": 8,
               "single_ended_input_pin": 0,
-              "calibration_pH7_voltage": -0.005,
-              "calibration_pH4_voltage": 0.172
+              "calibration_pH7_voltage": -0.01315,
+              "calibration_pH4_voltage": 0.155
             },
             "Pot1_ControlPh": {
               "type": "ControlPh",
