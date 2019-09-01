@@ -22,8 +22,7 @@
               "ads1115_data_sample_rate": 8,
               "single_ended_input_pin": 0,
               "calibration_pH7_voltage": -0.005,
-              "calibration_pH4_voltage": 0.172,
-              "debug_from_file": "random_ph_data.csv"
+              "calibration_pH4_voltage": 0.172
             },
             "Pot1_ControlPh": {
               "type": "ControlPh",
@@ -42,16 +41,14 @@
               "name": "Pot1_Ph_down",
               "directly_controllable": false,
               "mL_per_second": 1.0,
-              "GPIO": 27,
-              "debug_from_file": true
+              "GPIO": 27
             },
             "Pot1_Ph_up": {
               "type": "ControlPeristalticPump",
               "name": "Pot1_Ph_up",
               "directly_controllable": false,
               "mL_per_second": 1.0,
-              "GPIO": 17,
-              "debug_from_file": true
+              "GPIO": 17
             }
           }
         }

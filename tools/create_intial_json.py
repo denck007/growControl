@@ -16,7 +16,7 @@ Pot1_ph = {"type":"SensorPh_ADS1115", # The name of the python class to use
             "single_ended_input_pin":0, # The pin on the ADC to read for the pH P0=0,P1=1 etc
             "calibration_pH7_voltage":-0.005, # Volts at ph=7
             "calibration_pH4_voltage":0.172, # Volts at ph=4
-            "debug_from_file":"random_ph_data.csv" # datafile to stream instead of reading probe
+            #"debug_from_file":"random_ph_data.csv" # datafile to stream instead of reading probe
             }
 
 Pot1_ControlPh= {"type":"ControlPh", # The object type we are creating
@@ -35,13 +35,15 @@ Pot1_Ph_up = {"type":"ControlPeristalticPump",
                 "directly_controllable":False,
                 "mL_per_second": 1.0,
                 "GPIO":17, # The GPIO pin to use, GPIO17 is header pin 11
-                "debug_from_file":True}
+                #"debug_from_file":True
+                }
 Pot1_Ph_down = {"type":"ControlPeristalticPump",
                 "name":"Pot1_Ph_down",
                 "directly_controllable":False,
                 "mL_per_second": 1.0,
                 "GPIO":27,# The GPIO pin to use, GPIO27 is header pin 13
-                "debug_from_file":True}
+                #"debug_from_file":True
+                }
 
 pot1_children = {"pot1_ph":Pot1_ph,
                 "Pot1_ControlPh":Pot1_ControlPh,
