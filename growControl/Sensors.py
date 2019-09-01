@@ -101,10 +101,14 @@ class SensorPh_ADS1115(Sensor):
             #   8: 0.512V
             #  16: 0.256V
             self.ads.gain = self.ads1115_gain
-            self.ads.mode = Mode.CONTINIOUS
+            self.ads.mode = Mode.CONTINUOUS
             self.ads.data_rate = self.ads1115_data_sample_rate # datarates in samples/secs:8,16,32,64,128,250,475,860
 
             self.data_stream = AnalogIn(self.ads,self.single_ended_input_pin)
+
+        # TODO:
+        # Add in method to calibrate on the fly, probably needs some kind of access to database/calibration file
+        self._calibrate()
         
     def _read_sensor(self):
         '''
