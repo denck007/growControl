@@ -6,7 +6,6 @@ ControlPeristalticPump = 3
 ControlPeristalticPump = 4
 
 
-pot1_temp = {"type":"SensorTemperature","name":"pot1_temp","comms_address":"0x40"}
 Pot1_ph = {"type":"SensorPh_ADS1115", # The name of the python class to use
             "name":"Pot1_Ph", # What the sensor is called, this is saved in the output
             "bus_address":"0x48", # In this case the SensorPh uses I2C so this address is used
@@ -44,8 +43,7 @@ Pot1_Ph_down = {"type":"ControlPeristalticPump",
                 "GPIO":27,# The GPIO pin to use, GPIO27 is header pin 13
                 "debug_from_file":True}
 
-pot1_children = {"temperature":pot1_temp,
-                "pot1_ph":Pot1_ph,
+pot1_children = {"pot1_ph":Pot1_ph,
                 "Pot1_ControlPh":Pot1_ControlPh,
                 "Pot1_Ph_down":Pot1_Ph_down,
                 "Pot1_Ph_up":Pot1_Ph_up}
@@ -54,14 +52,9 @@ pot1 = {"type":"Pot",
         "name":"Pot1",
         "children":pot1_children}
 
-temperature_environment = {"type":"SensorTemperature",
-                            "name":"temperature_environment",
-                            "comms_address":"0x40"}
 
-children = {"pot1":pot1,
-            "temperature_environment":temperature_environment}
+children = {"pot1":pot1}
 zone1 = {"type":"Zone","name":"Zone1","children":children}
-#zone2 = {"type":"Zone","name":"Zone2","children":children}
 
 world = {"name":"world",
         "type":"World",

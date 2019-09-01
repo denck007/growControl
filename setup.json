@@ -12,11 +12,6 @@
           "type": "Pot",
           "name": "Pot1",
           "children": {
-            "temperature": {
-              "type": "SensorTemperature",
-              "name": "pot1_temp",
-              "comms_address": "0x40"
-            },
             "pot1_ph": {
               "type": "SensorPh_ADS1115",
               "name": "Pot1_Ph",
@@ -59,11 +54,6 @@
               "debug_from_file": true
             }
           }
-        },
-        "temperature_environment": {
-          "type": "SensorTemperature",
-          "name": "temperature_environment",
-          "comms_address": "0x40"
         }
       }
     }
