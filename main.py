@@ -11,7 +11,7 @@ from growControl import Environments
 from growControl import Sensors
 from growControl import Controls
 try:
-    import RPi.GPIO
+    import RPi.GPIO as GPIO
 except:
     print("Error importing RPi.GPIO, may need to run with fake data")
 
