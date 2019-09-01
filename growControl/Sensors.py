@@ -133,6 +133,5 @@ class SensorPh_ADS1115(Sensor):
         return self.V2ph_m * voltage + self.V2ph_b
 
 
-ImplementedSensors = {"SensorPh_ADS1115":SensorPh_ADS1115}
-
+ImplementedGrowObjects = {"SensorPh_ADS1115":SensorPh_ADS1115}
 

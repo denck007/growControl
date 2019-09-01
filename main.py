@@ -32,6 +32,18 @@ class World:
         # Generate all of the sensor and control links
         self._link_growObjects()
 
+    def _get_ImplemetedGrowObjects(self):
+        '''
+        Go through all of the implemented items and create a unified dict
+        '''
+        ImplemetedGrowObjects = {}
+        ImplemetedGrowObjects.update(Environments.ImplementedGrowObjects)
+        ImplemetedGrowObjects.update(Sensors.ImplementedGrowObjects)
+        ImplemetedGrowObjects.update(Controls.ImplementedGrowObjects)
+
+        return ImplemetedGrowObjects
+
+
     def _initialize_child(self,config):
         '''
         Recursive function that creates all of the objects defined in the input file
@@ -39,18 +51,16 @@ class World:
         '''
         children = config["children"]
         result = {}
+        ImplemetedGrowObjects = self._get_ImplemetedGrowObjects()
         for child in children:
             child_type = children[child]["type"]
+            child_name = children[child]["name"]
             
-            if child_type in Environments.ImplementedEnvironments:
-                result[children[child]["name"]] = Environments.ImplementedEnvironments[child_type](children[child])
-            elif child_type in Sensors.ImplementedSensors:
-                result[children[child]["name"]] = Sensors.ImplementedSensors[child_type](children[child])
-            elif child_type in Controls.ImplementedControls:
-                result[children[child]["name"]] = Controls.ImplementedControls[child_type](children[child])
+            if child_type in ImplemetedGrowObjects:
+                result[child_name] = ImplemetedGrowObjects[child_type](children[child])
             else:
                 print("Did not find implementation for item with name: {} type: {}\n\t".format(config["name"],child_type) +
-                    "It may not be implemented or may not have been added to the .ImplementedX in the corresponding file")
+                    "It may not be implemented or may not have been added to the <Sensors/Environments/Controls>.Implemented in the corresponding file")
             
             # If there are any children the recurse on them
             if "children" in children[child]:

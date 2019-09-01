@@ -126,10 +126,5 @@ class ControlPeristalticPump(Control):
 
 
 
-ImplementedControls = {"ControlPh":ControlPh,"ControlPeristalticPump":ControlPeristalticPump}
-
-
-
-
-
+ImplementedGrowObjects = {"ControlPh":ControlPh,"ControlPeristalticPump":ControlPeristalticPump}
 
