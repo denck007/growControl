@@ -13,12 +13,24 @@ class World:
     def __init__(self,config):
         '''
         '''
-        # Save the output file name
-        # Delete the reference so it is easier to loop over other items in the dict
-        self.outfile = config["outfile"]
+        # Initialize an empty dict to hold data in as needed
+        # Note that this dict will be emptied each time the data is saved
+        # This is a dict of dicts. The keys of self.data are the sensor names. 
+        self.data = {}
+
+        # Setup how data is saved. This is controlled by the output_type value in config
+        if config["output_type"] == "csv":
+            self.save_data = self._save_data_csv
+            self.csv_name = config["csv_name"]
+            self.csv_name = self.csv_name.replace(".csv","") # strip of extension if given
+        elif config["output_type"] == "influxdb":
+            self.save_data = self._save_data_influxdb
+            # All the influxdb setup should go here
+        else:
+            raise TypeError("{} is not a defined value for config['output_type'] in World.__init__()".format(config["output_type"]))
+
         self.main_loop_min_time = config["main_loop_min_time"]
         self.last_loop = 0.0
-        config.pop("outfile")
 
         # Generate all of the objects    
         self.growObjects = self._initialize_child(config)
@@ -88,14 +100,47 @@ class World:
 
     def report_data(self):
         '''
-        Output a dict that can be passed up the chain for outputing the data
+        Update self.data with current values. self.data is a dict of dicts. The keys of
+            self.data are the growObjects name
         '''
         # get all of the children's data
-        data = {}
         for key in self.growObjects:
-            data.update(self.growObjects[key].report_data())
+            data = self.growObjects[key].report_data()
+            if data is not None:            
+                self.data.update(data)
+
+        # Save all the data to disk. The save_data() method is assigned in __init__()
+        self.save_data()
+
+        # Now reset so that new controls are writing to the empty dict
+        self.data = {}
+        return None
+
+    def _save_data_csv(self):
+        '''
+        The function is assigned to self.save_data if config["output_type"] == "csv"
+        It is called each time self.report_data() is called and will save the data to
+            self.csv_name which is set by config["csv_name"]
+        Each item in the dict self.data will be saved to its own file based on csv_name
+        '''
+        for key in self.data:
+            if key is None:
+                continue
+            fname = "{}_{}.csv".format(self.csv_name,key)
+            line = ""
+            for item in self.data[key]:
+                if line != "":
+                    line += ","
+                line += "{}".format(self.data[key][item])
+            line += "\n"
+            with open(fname,'a') as f:
+                f.write(line)
+
+    def _save_data_influxdb(self):
+        '''
         
-        return data
+        '''
+        raise NotImplementedError("world._save_data_influxdb")
 
     def pause_main_loop(self):
         '''

@@ -1,7 +1,8 @@
 {
   "name": "world",
   "type": "World",
-  "outfile": "dataout.json",
+  "output_type": "csv",
+  "csv_name": "data_out.csv",
   "main_loop_min_time": 5.0,
   "children": {
     "zone1": {
@@ -17,7 +18,7 @@
               "name": "Pot1_Ph",
               "bus_address": "0x48",
               "save_every_seconds": 60,
-              "average_over_samples": 30,
+              "average_over_samples": 3,
               "ads1115_gain": 8,
               "ads1115_data_sample_rate": 8,
               "single_ended_input_pin": 0,

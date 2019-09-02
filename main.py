@@ -25,7 +25,7 @@ if __name__ == "__main__":
        
         for ii in range(100):
             world.update()
-            world.run_controls()
+            #world.run_controls()
             data = world.report_data()
             world.pause_main_loop()
     except:

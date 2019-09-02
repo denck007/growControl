@@ -16,12 +16,7 @@ class GrowObject:
         '''
         Output a dict that can be passed up the chain for outputing the data
         '''
-        data = {}
-        if hasattr(self,'value'):
-            data = {"name":self.name,
-                    "type":self.type,
-                    "value":self.value}
-        return data
+        pass
 
     def update(self):
         '''
@@ -50,4 +45,4 @@ class GrowObject:
                 if self.last_run_control + self.control_frequency >= time.time():
                     self.run_control()
                     self.last_run_control = time.time()
-        
+

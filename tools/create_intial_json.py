@@ -10,7 +10,7 @@ Pot1_ph = {"type":"SensorPh_ADS1115", # The name of the python class to use
             "name":"Pot1_Ph", # What the sensor is called, this is saved in the output
             "bus_address":"0x48", # In this case the SensorPh uses I2C so this address is used
             "save_every_seconds":60, # Wait at least this many seconds before saving the next datapoint
-            "average_over_samples":30, # Keep running average of last n samples
+            "average_over_samples":3, # Keep running average of last n samples
             "ads1115_gain":8, # The gain to use from the ads1115, 
             "ads1115_data_sample_rate":8, # the sample rate from ads1115, note that the device will average the analog input since the last reading
             "single_ended_input_pin":0, # The pin on the ADC to read for the pH P0=0,P1=1 etc
@@ -60,7 +60,9 @@ zone1 = {"type":"Zone","name":"Zone1","children":children}
 
 world = {"name":"world",
         "type":"World",
-        "outfile":"dataout.json",
+        "output_type":"csv",
+        "csv_name":"data_out.csv",
+
         "main_loop_min_time":5.0, # the minimum time between looping over everything, prevents tight loop
         "children":{"zone1":zone1}}
 

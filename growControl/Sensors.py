@@ -24,6 +24,9 @@ class Sensor(GrowObject.GrowObject):
 
         self._value = None
 
+        # The buffer holds the history of the voltages
+        # ph values are converted on the fly
+        # This allows us to record the raw history if the calibration changes
         self.buffer = CircularBuffer(self.average_over)
 
         # Sensors are not controllable, as they have no control function
@@ -47,6 +50,13 @@ class Sensor(GrowObject.GrowObject):
         print("The _read_sensor class must be defined in the subclass")
         raise NotImplementedError
 
+    def _conversion_function(self,raw_value):
+        '''
+        Convert a raw sensor measurement to useable units
+        If the subclass does not implement a different function return the raw value
+        '''
+        return raw_value
+
     def update(self):
         '''
         Call the sensor device's read value
@@ -66,11 +76,11 @@ class Sensor(GrowObject.GrowObject):
     @property
     def value(self):
         '''
-        Return the value of the sensor
+        Return the ph value converted from the current state of the sensor
         This @property is created so that the object requesting this value can get it in a consistent way
         https://www.programiz.com/python-programming/property
         '''
-        return self._value
+        return self._conversion_function(self._value)
 
 class SensorPh_ADS1115(Sensor):
     '''
@@ -117,7 +127,7 @@ class SensorPh_ADS1115(Sensor):
 
         If using debug_from_file this is never reached as the parent class will not call this
         '''
-        return self.voltage_to_ph(self.data_stream.voltage)
+        return self.data_stream.voltage
 
     def _calibrate(self, V_at_ph4=.1728, V_at_ph7=0):
         '''
@@ -126,11 +136,29 @@ class SensorPh_ADS1115(Sensor):
         self.V2ph_m = (7-4)/(V_at_ph7-V_at_ph4)
         self.V2ph_b = 7-self.V2ph_m * V_at_ph7
 
-    def voltage_to_ph(self,voltage):
+    def _conversion_function(self,voltage):
         '''
         Given a voltage, return the ph of the sensor
         '''
         return self.V2ph_m * voltage + self.V2ph_b
+
+    def report_data(self):
+        '''
+        Return a dict of a dict with the data to report
+        Format:
+            {self.name:{"time":time.time(),
+                        "voltage_raw:self.buffer.value, # the current measurement
+                        "voltage_smooth:self.buffer.average, # The averaged voltage measurement
+                        "ph_raw":self.voltage_to_ph(self.buffer.value),
+                        "ph_smooth:self.voltage_to_ph(self.buffer.average)
+        '''
+        data = {self.name:{"time":time.time(),
+                        "voltage_raw":self.buffer.value, # the current measurement
+                        "voltage_smooth":self.buffer.average, # The averaged voltage measurement
+                        "ph_raw":self._conversion_function(self.buffer.value),
+                        "ph_smooth":self.value}}
+        return data
+       
 
 
 ImplementedGrowObjects = {"SensorPh_ADS1115":SensorPh_ADS1115}
