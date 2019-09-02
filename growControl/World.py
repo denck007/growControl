@@ -64,8 +64,7 @@ class World:
             if child_type in ImplemetedGrowObjects:
                 result[child_name] = ImplemetedGrowObjects[child_type](children[child])
             else:
-                print("Did not find implementation for item with name: {} type: {}\n\t".format(config["name"],child_type) +
-                    "It may not be implemented or may not have been added to the <Sensors/Environments/Controls>.Implemented in the corresponding file")
+                raise NotImplementedError("{} is not implemented or is has not been added to the corresponding *.Implemented dictionary")
             
             # If there are any children the recurse on them
             if "children" in children[child]:
