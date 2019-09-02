@@ -28,11 +28,10 @@ class CircularBuffer(object):
         '''
         Add a value to the buffer
         '''
+        self.advance_current_location()
         self.sum -= self.data[self.current_location]
         self.data[self.current_location] = value
         self.sum += value
-        
-        self.advance_current_location()
         
         self.average = self.sum/self.length
     
