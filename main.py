@@ -23,9 +23,9 @@ if __name__ == "__main__":
             config = json.loads(f.read())
         world = World.World(config)
        
-        for ii in range(100):
+        for ii in range(10000):
             world.update()
-            #world.run_controls()
+            world.run_controls()
             data = world.report_data()
             world.pause_main_loop()
     except:

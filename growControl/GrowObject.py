@@ -11,6 +11,7 @@ class GrowObject:
     def __init__(self,config):
         self.name = config["name"]
         self.type = config["type"]
+        self.world = config["world"] # every object has access to the world
 
     def report_data(self):
         '''

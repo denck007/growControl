@@ -19,7 +19,6 @@ class Sensor(GrowObject.GrowObject):
         '''
         params is a dictionary of parameters to setup a sensor.
         '''
-        self.save_every = int(config['save_every_seconds'])
         self.average_over = int(config['average_over_samples'])
 
         self._value = None
@@ -71,7 +70,7 @@ class Sensor(GrowObject.GrowObject):
             self.buffer.update(raw_value)
         self._value = self.buffer.average
 
-        print("ph: {:.2f}".format(self.value))
+        print("v_raw: {:<7.4f} v_avg: {:<7.4f} ph_raw: {:<6.2f} ph_avg: {:<6.2f}".format(self.buffer.value,self.buffer.average,self._conversion_function(self.buffer.value),self._conversion_function(self.buffer.average)))
     
     @property
     def value(self):

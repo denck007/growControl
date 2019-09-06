@@ -58,9 +58,10 @@ class World:
         result = {}
         ImplemetedGrowObjects = self._get_ImplemetedGrowObjects()
         for child in children:
+            children[child]["world"] = self
             child_type = children[child]["type"]
             child_name = children[child]["name"]
-            
+
             if child_type in ImplemetedGrowObjects:
                 result[child_name] = ImplemetedGrowObjects[child_type](children[child])
             else:
@@ -146,7 +147,7 @@ class World:
         sleep until at least self.main_loop_min_time has passes since last loop
         '''
         time_since_last = time.time()-self.last_loop
-        print("\tSleepTime: {:.5f} ".format(self.main_loop_min_time - time_since_last))
+        #print("\tSleepTime: {:.5f} ".format(self.main_loop_min_time - time_since_last))
         delta_to_min = max(self.main_loop_min_time - time_since_last,0)
         time.sleep(delta_to_min)
         self.last_loop = time.time()
