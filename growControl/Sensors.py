@@ -8,6 +8,7 @@ try:
     import adafruit_ads1x15.ads1115 as ADS
     from adafruit_ads1x15.analog_in import AnalogIn
     from adafruit_ads1x15.ads1x15 import Mode
+    import Adafruit_DHT
 except:
     print("Could not import board,busio, and adafruit_ads1x15 libraries, must run in debug_from_file mode")
 
@@ -69,7 +70,6 @@ class Sensor(GrowObject.GrowObject):
             raw_value = self._read_sensor()
             self.buffer.update(raw_value)
         self._value = self.buffer.average
-
         print("v_raw: {:<7.4f} v_avg: {:<7.4f} ph_raw: {:<6.2f} ph_avg: {:<6.2f}".format(self.buffer.value,self.buffer.average,self._conversion_function(self.buffer.value),self._conversion_function(self.buffer.average)))
     
     @property
@@ -157,8 +157,74 @@ class SensorPh_ADS1115(Sensor):
                         "ph_raw":self._conversion_function(self.buffer.value),
                         "ph_smooth":self.value}}
         return data
+
+class SensorTempHumidity_DHT(Sensor):
+    '''
+    Defines the temperature/humidity sensor DHT11/22 or AM2302
+    https://github.com/adafruit/Adafruit_Python_DHT
+
+    Because this sensor returns 2 values, we have to override some of the methods in the Sensors class
+    '''
+    def __init__(self,config):
+
+        print("\t\tIn SensorTempHumidity.__init__()")
+
+        self.sensor_model = config['sensor_model']
+        self.pin =  config['GPIO_Pin']
+        self.retries = 15 # number of times to try and read the sensor
+        self.retry_pause = 0.1 # Time to wait between retries
+        super().__init__(config)
+
+        self.buffer_temp = CircularBuffer(self.average_over)
+        self.buffer_humidity = CircularBuffer(self.average_over)
+
+        if self.sensor_model == "DHT11":
+            self.sensor = Adafruit_DHT.DHT11
+        elif self.sensor_model == "DHT22":
+            self.sensor = Adafruit_DHT.DHT22
+        elif self.sensor_model == "AM2302":
+            self.sensor = Adafruit_DHT.AM2302
+        else:
+            raise ValueError("Invalid sensor_model {}. Expected DHT11, DHT22, or AM2302".format(self.sensor_model))
+        
+    def _read_sensor(self):
+        '''
+        device specific implementation of this sensor
+        This overrides Sensor._read_sensor()
+
+        If using debug_from_file this is never reached as the parent class will not call this
+        '''
+        humidity,temp = Adafruit_DHT.read_retry(self.sensor,
+                                                self.pin,
+                                                retries=self.retries,
+                                                delay_seconds=self.retry_pause)
+        print("Temp: {:>6.2f} Humidity: {:>4.1f}".format(temp,humidity))
+        return {"temp":temp,"humidity":humidity}
+
+    def report_data(self):
+        '''
+        Return a dict of a dict with the data to report
+        '''
+        data = {self.name+"_temp":{"time":time.time(),
+                        "temp_raw":self.buffer_temp.value, # the current measurement
+                        "temp_smooth":self.buffer_temp.average, # The averaged  measurement
+                         },
+               self.name+"_humidity":{"time":time.time(),
+                        "humidity_raw":self.buffer_humidity.value, # the current measurement
+                        "humidity_smooth":self.buffer_humidity.average, # The averaged measurement
+                         }
+                }
+        return data
        
+    def update(self):
+        '''
+        This overrides the method in Sensor class because the sensor returns 2 values
+        '''
+        reading = self._read_sensor()
+        self.buffer_temp.update(reading["temp"])
+        self.buffer_humidity.update(reading["humidity"])
+        self._value = {"temp":self.buffer_temp.average,"humidity":self.buffer_humidity.average}
 
 
-ImplementedGrowObjects = {"SensorPh_ADS1115":SensorPh_ADS1115}
+ImplementedGrowObjects = {"SensorPh_ADS1115":SensorPh_ADS1115,"SensorTempHumidity_DHT":SensorTempHumidity_DHT}
 
