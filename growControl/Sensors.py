@@ -1,7 +1,9 @@
 import time
 from growControl import utils
 from growControl.utils import CircularBuffer
-from growControl import GrowObject
+from growControl.GrowObject import GrowObject
+from growControl.ValueConverter import ValueConverter
+
 try:
     import board
     import busio
@@ -11,33 +13,29 @@ try:
 except:
     print("Could not import board,busio, and adafruit_ads1x15 libraries, must run in debug_from_file mode")
 
-class Sensor(GrowObject.GrowObject):
+class Sensor(GrowObject):
     '''
     Defines the common components of a sensor. All sensors devices should inherit from this
     '''
-    def __init__(self,config):
+    def __init__(self,params,parent):
         '''
         params is a dictionary of parameters to setup a sensor.
+        parent is the parent object, likely an instance of World or GrowObject
         '''
-        self.save_every = int(config['save_every_seconds'])
-        self.average_over = int(config['average_over_samples'])
+        super().__init__(params,parent)
+        
+        # Settings that are specific to a Sensor
+        # maximum number of times to retry a reading
+        self.max_retry_count = params["max_retry_count"] if "max_retry_count" in params else 0
 
-        self._value = None
+        if ("data_converter_type" not in params) and ("data_converter_params" not in params):
+            self.log()
+        self.value_converter = ValueConverter(params["value_converter"])
 
-        self.buffer = CircularBuffer(self.average_over)
 
-        # Sensors are not controllable, as they have no control function
-        self.directly_controllable = False
 
-        if "debug_from_file" in config:
-            self.debug_from_file = True
-            with open(config["debug_from_file"],'r') as f:
-                raw_data = [float(x) for x in f.readlines()]
-            self.debug_data = CircularBuffer(raw_data)
-        else:
-            self.debug_from_file = False
+        self.counter_retries = 0 # how many times has it tried to do a reading and failed in a row
 
-        super().__init__(config)
 
     def _read_sensor(self):
         '''

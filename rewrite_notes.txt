@@ -1,0 +1,137 @@
+world:
+- properties:
+    - all db interface stuff
+        - db type
+        - login
+        - address
+        - db name (fixed, add new parameters for each grow)
+    - current grow name
+    -logdir
+- methods
+    - Send data to db
+    - Query db with various functions
+    - dict to json for db - is dependant on db type
+    - log_error
+    - log_action
+    - main loop:
+        - read all sensors
+            - each sensor responds with None or a dictionary that defines the current reading
+                - time of reading
+                - value raw
+                - value converted
+                - sensor name
+            - each sensor needs a timeout and retry times value
+
+common:
+- name
+- type and interfaces
+- time_warmup
+- time_run_every
+- time_previous
+- __call__() raise NotImplemented
+- log() - call parent
+- __init__(params,parent)
+
+
+Sensor:
+- parameters:
+    - name
+    - type (GPIO, SPI, I2C, etc)
+        - all associated values to create an interface
+    - time_warmup (default=0)
+    - time_run_every (time between reads, how often to attempt to read sensor)
+    - max retry
+    - how to convert from raw to value
+- properties:
+    - Interface (instance)
+    - raw to value (instance)
+    - time_next (the next time to read)
+        - on startup is now + time_warmup
+        - after each read is now + time_run_every
+    - time_previous (the last time the sensor was sucessfully read)
+- methods:
+    - log(error_type,message) 
+        - runs the log function in World
+    - __call__()
+        - if now > time_next
+        - call interface to read value
+        - if it got a value:
+            - convert value
+            - set time_previous = now
+            - set_time_next = now+time_run_every
+            - returns a dict with time, raw, converted, name
+        - else:
+            - do not change time_previous or time_next. Want to try the next iteration
+            - return {sensor_name+error, time}
+
+Control:
+When all of the contitions in control_conditions are met, then the state is set on for the control time.
+- parameters
+    - name
+    - interface type
+        - all associated values to create an interface
+    - time_run_every
+    - time_windup (seconds before the first control can happen)
+    - control by time or value
+        - if control by value, need a configuration of value/second (like if want control of 10 ml, need to give it a ml/second of on time)
+    - blocking
+        - if blocking, when a control is performed it will use a time.sleep call internally to make sure the start/stop timing is right (think ph control)
+        - if not blocking, when a control is turned on it will return imediatly and keep the control in the new state. Each iteration of the 
+            main control loop it will check to see if it should turn off. (think light control)
+    - control conditions
+        - list of dicts [{sensor_name:<>,ref_value:<>,comparitor:<lt,gt,lte,gte>,aggregate_over:<seconds>,aggregation_mode:<mean,max,min>}]
+        - the db is queried for each sensor_name over the aggregated_over time period using the aggregation mode. The result
+            is compared to the ref_value using comparitor.
+            - Note special values for sensor_name are "time_of_day", which just returns the local time as an integer ranging from 0 to 2359
+        - If all items in the list return True, then the control is set to active
+        - for ph up control this would be [{"sensor_name":"environment1_tank1_ph","ref_value":5.6,"comparitor":"lte","aggregate_over":120,"aggregation_mode":"mean"}]
+        - for light control this would be [{"sensor_name":"time_of_day","ref_value":800,"comparitor":"gte","aggregate_over":None,"aggregation_mode":None},
+                                            {"sensor_name":"time_of_day","ref_value":2000,"comparitor":"lte","aggregate_over":None,"aggregation_mode":None}]
+    - default state (on or off)
+        - This will be the state until end of windup_time
+- properties
+    - current state (on/off)
+    - sct_next, time of the next state change
+        - used when blocking=False
+    - sct_previous, the time of the previous state change
+    - sct_possible, the next possible time for a state change
+        - on startup take current time and add windup
+        - on control take current time and add min time since last control
+- methods
+    - log(error_type,message) 
+        - runs the log function in World
+    - __value_per_second_to_control_seconds (convert a value_per_second input to a control_time)
+    - __call__()
+        - if sct_next > now and sct_possible > now
+        - turns control on and off (wrapped in try/catch, report error in catch)
+        - sets current_state
+        - create report data
+        - return report
+    - create_report
+        - create dict of time, value(current state), name
+
+Interface:
+- properties
+    - type (GPIO, SPI, I2C, etc)
+    - address
+    - parent
+- methods:
+    - initialize
+    - destroy
+    - read_value
+    - log(error_type,message) 
+        - runs the log function in parent
+
+Raw2Value:
+- parameters:
+    - type
+        - raw*Scalar1 + scalar2
+        - (raw+scalar1) * scalar2
+        - others as needed
+    - scalars
+- properties:
+    - parent
+- methods:
+    - log(error_type,message) 
+        - runs the log function in parent
+    - __call__(raw) converts value
