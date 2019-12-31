@@ -3,7 +3,10 @@
 #from growControl import utils
 from growControl import GrowObject
 import time
-#import RPi.GPIO as GPIO
+try:
+    import RPi.GPIO as GPIO
+except:
+    print("Error importing RPi.GPIO, may need to run with fake data")
 
 class Control(GrowObject.GrowObject):
     '''
@@ -85,8 +88,8 @@ class ControlPh(Control):
         current_pH = self.SensorPh.value
         if current_pH > (self.targetValue + self.targetRange):
             print("{:.1f} ph is {:.2f} which is over the max of {:.2f}+{:.2f}={:.2f}".format(time.time(),current_pH,self.targetValue,self.targetRange,self.targetValue+self.targetRange))
-            self.ControlPh_down.run_mL(self.mL_per_control)
             self.action_last = time.time()
+            self.ControlPh_down.run_mL(self.mL_per_control)
         elif current_pH < (self.targetValue - self.targetRange):
             print("{:.1f} ph is {:.2f} which is under the max of {:.2f}-{:.2f}={:.2f}".format(time.time(),current_pH,self.targetValue,self.targetRange,self.targetValue-self.targetRange))
             self.ControlPh_up.run_mL(self.mL_per_control)
@@ -101,9 +104,10 @@ class ControlPeristalticPump(Control):
         '''
         '''
         self.mL_per_second = config["mL_per_second"]
-        #self.GPIO = int(config["GPIO"])
-        #GPIO.setmode(GPIO.BCM)
-        #GPIO.setup(self.GPIO, GPIO.OUT)
+        self.GPIO = int(config["GPIO"])
+        GPIO.setmode(GPIO.BCM)
+        GPIO.setup(self.GPIO, GPIO.OUT)
+        GPIO.output(self.GPIO,GPIO.HIGH)
 
         super().__init__(config)
 
@@ -111,22 +115,23 @@ class ControlPeristalticPump(Control):
         '''
         Run the pump for the correct amount of time to dispense mL_to_dispense fluid
         '''
-        print("\tSleeping for {:.5f} seconds while dispensing fluid for {}".format(mL_to_dispense/self.mL_per_second,self.name))
+        dispersion_time = mL_to_dispense/self.mL_per_second
+        #print("\tSleeping for {:.5f} seconds while dispensing fluid for {}".format(dispersion_time,self.name))
         if self.debug_from_file:
-            time.sleep(mL_to_dispense/self.mL_per_second)
+            time.sleep(dispersion_time)
             return
 
-        GPIO.output(self.GPIO,GPIO.HIGH)
+        GPIO.output(self.GPIO,GPIO.LOW)
         
         time.sleep(mL_to_dispense/self.mL_per_second)
-        GPIO.output(self.GPIO,GPIO.LOW)
+        GPIO.output(self.GPIO,GPIO.HIGH)
+
+        report = {self.name:{"time":time.time(),
+                             "mL_to_dispense":mL_to_dispense,
+                             "dispersion_time":dispersion_time}}
+        self.world.data.update(report)
 
 
 
-ImplementedControls = {"ControlPh":ControlPh,"ControlPeristalticPump":ControlPeristalticPump}
-
-
-
-
-
+ImplementedGrowObjects = {"ControlPh":ControlPh,"ControlPeristalticPump":ControlPeristalticPump}
 

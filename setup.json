@@ -1,7 +1,9 @@
 {
   "name": "world",
   "type": "World",
-  "outfile": "dataout.json",
+  "output_type": "csv",
+  "csv_name": "diode_test.csv",
+  "main_loop_min_time": 1.0,
   "children": {
     "zone1": {
       "type": "Zone",
@@ -11,48 +13,44 @@
           "type": "Pot",
           "name": "Pot1",
           "children": {
-            "temperature": {
-              "type": "SensorTemperature",
-              "name": "pot1_temp",
-              "comms_address": "0x40"
-            },
             "pot1_ph": {
               "type": "SensorPh_ADS1115",
               "name": "Pot1_Ph",
               "bus_address": "0x48",
-              "save_every_seconds": 60,
-              "average_over_samples": 30,
+              "average_over_samples": 20,
               "ads1115_gain": 8,
               "ads1115_data_sample_rate": 8,
-              "differential_input1": "P0",
-              "differential_input2": "P1"
+              "single_ended_input_pin": 0,
+              "calibration_pH7_voltage": -0.01315,
+              "calibration_pH4_voltage": 0.155
             },
             "Pot1_ControlPh": {
               "type": "ControlPh",
               "name": "Pot1 Control Ph",
+              "directly_controllable": true,
+              "minimum_time_between_actions": 600.0,
               "SensorPh_name": "Pot1_Ph",
               "ControlPh_up_name": "Pot1_Ph_up",
               "ControlPh_down_name": "Pot1_Ph_down",
               "targetValue": 6.0,
               "targetRange": 0.2,
-              "directly_controllable": true
+              "mL_per_control": 1
             },
             "Pot1_Ph_down": {
               "type": "ControlPeristalticPump",
               "name": "Pot1_Ph_down",
-              "directly_controllable": false
+              "directly_controllable": false,
+              "mL_per_second": 0.5,
+              "GPIO": 27
             },
             "Pot1_Ph_up": {
               "type": "ControlPeristalticPump",
               "name": "Pot1_Ph_up",
-              "directly_controllable": false
+              "directly_controllable": false,
+              "mL_per_second": 1.0,
+              "GPIO": 17
             }
           }
-        },
-        "temperature_environment": {
-          "type": "SensorTemperature",
-          "name": "temperature_environment",
-          "comms_address": "0x40"
         }
       }
     }

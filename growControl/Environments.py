@@ -73,5 +73,6 @@ class Pot(Environment):
         super().__init__(config)
 
 
-ImplementedEnvironments = {"Zone":Zone,
+ImplementedGrowObjects = {"Zone":Zone,
                             "Pot":Pot}
+

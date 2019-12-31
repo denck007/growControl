@@ -10,7 +10,7 @@ class GrowObject:
     This is the base class for all objects to be used in the grow control system
     It defines a few basic things that are common to all classes
     '''
-    
+
     # Properties that can be set for every grow object. Not all of them need to be set for every grow object
     # Default values are set here
     time_warmup = 0.
