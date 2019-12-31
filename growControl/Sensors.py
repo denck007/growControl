@@ -26,12 +26,9 @@ class Sensor(GrowObject):
         
         # Settings that are specific to a Sensor
         # maximum number of times to retry a reading
-        self.max_retry_count = params["max_retry_count"] if "max_retry_count" in params else 0
+        self.__initialize_value__("max_retry_count",params,default_value=0,required=False)
 
-        if ("data_converter_type" not in params) and ("data_converter_params" not in params):
-            self.log()
-        self.value_converter = ValueConverter(params["value_converter"])
-
+        self.value_converter = ValueConverter(params["value_converter"],self)
 
 
         self.counter_retries = 0 # how many times has it tried to do a reading and failed in a row

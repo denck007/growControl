@@ -1,6 +1,6 @@
-from growControl.GrowObject import loggable
+import logging
 
-class ValueConverter(loggable):
+class ValueConverter:
     '''
     Converts a raw input into useable output
     '''
@@ -10,7 +10,8 @@ class ValueConverter(loggable):
         '''
         self.name = "{}_valueconverter".format(parent.name)
         self.parent = parent
-        super().__init__(parent=parent)
+        self.logger=logging.getLogger("{}-{}".format(self.parent,self.name))
+        self.logger.info("Initializing object")
 
         self.convert_type = params["convert_type"]
         
@@ -23,6 +24,7 @@ class ValueConverter(loggable):
             self.scalar2 = params["scalar2"]
             self.conversion_function = self.raw_add_mul
         else:
+            self.logger.critical("'convert_type' {} is not implemented - Program closing".format(self.convert_type))
             raise NotImplementedError("convert_type {} is not implemented for {} in growControl.ValueConverter".format(self.convert_type,self.name))
 
     def raw_mul_add(self,value):

@@ -1,18 +1,29 @@
-from growControl.GrowObject import loggable
+import logging
+from growControl.GrowObject import GrowObject
 
-class Interface(loggable):
+class Interface(GrowObject):
     '''
     Defines an interface to IO to read sensors or run controls
+    Generic Settings:
+        {"interface_type":<GPIO,SPI,I2C,ads1115>,
+        "interface_mode":<'input','output'>,
+        }
+    ADS1115 Settings:
+        {"ads1115_gain":<2/3,1,2,4,8,16>,
+        "ads1115_data_sample_rate":<8,16,32,64,128,250,475,860>,#samples/second
+        "ads1115_single_ended_input_pin":<"P0","P1","P2","P3">
+        }
     '''
-    def __init__(self,interface_type,interface_params,parent):
+    def __init__(self,interface_params,parent):
         '''
         Create an instance of an interface
         '''
         self.name = "{}_interface".format(parent.name)
         self.parent = parent
-        super().__init__(parent=parent)
+        self.logger=logging.getLogger("{}-{}".format(self.parent,self.name))
+        self.logger.info("Initializing object")
 
-        self.interface_type = interface_type
+        self.interface_type = interface_params["interface_type"]
         self.interface_mode = interface_params["interface_mode"] # either "input" or "output"
         
         if self.interface_type == "GPIO":
@@ -21,9 +32,56 @@ class Interface(loggable):
             self._config_SPI(interface_params)
         elif self.interface_type == "I2C":
             self._config_I2C(interface_params)
+        elif self.interface_type == "ads1115":
+            self._config_ads1115(interface_params)
         else:
+            self.logger.critical("'interface_type' {} is not implemented - Program closing".format(self.interface_type))
             raise NotImplementedError("interface_type {} is not implemented in growControl.InterfaceType".format(self.interface_type))
     
+    # Interface for working with ADS1115
+    def _config_ads1115(self,params):
+        '''
+        Configure an interface for working with the ADS1115 analog to digital converter
+        '''
+        import board
+        import busio
+        import adafruit_ads1x15.ads1115 as ADS
+        from adafruit_ads1x15.analog_in import AnalogIn
+        from adafruit_ads1x15.ads1x15 import Mode
+
+        if self.interface_mode == "input":
+            self._call_function = self._read_ads1115
+        else:
+            self.logger.critical("Device can only be operated in 'input' mode not {} - Program closing".format(self.interface_mode))
+            raise KeyError("Invalid interface mode {} in {}".format(self.interface_mode,self.name))
+
+        self.ads1115_gain =  params['ads1115_gain']
+        self.ads1115_data_sample_rate =  params['ads1115_data_sample_rate']
+        self.ads1115_single_ended_input_pin = params['ads1115_single_ended_input_pin']
+
+        self.ads1115_i2c = busio.I2C(board.SCL,board.SDA)
+        self.ads1115 = ADS.ADS1115(self.ads1115_i2c)
+        # Gain for the system: voltage range:
+        # 2/3: 6.144V
+        #   1: 4.096V
+        #   2: 2.048V
+        #   4: 1.024V
+        #   8: 0.512V
+        #  16: 0.256V
+        self.ads1115.gain = self.ads1115_gain
+        self.ads1115.mode = Mode.CONTINIOUS
+        self.ads1115.data_rate = self.ads1115_data_sample_rate # datarates in samples/secs:8,16,32,64,128,250,475,860
+
+        self.data_stream = AnalogIn(self.ads1115,self.ads1115_single_ended_input_pin)
+
+        raise NotImplementedError("interface_type ADS1115 has not been implemented yet")
+    
+    def _read_ads1115(self):
+        '''
+        Read the current value from the ADS1115
+        '''
+        return self.data_stream.voltage
+
     # GPIO interface code
     def _config_GPIO(self,params):
         '''
@@ -34,6 +92,7 @@ class Interface(loggable):
         elif self.interface_mode == "output":
             self._call_function = self._write_GPIO
         else:
+            self.logger.critical("Invalid interface mode {} - Program closing".format(self.interface_mode))
             raise KeyError("Invalid interface mode {} in {}".format(self.interface_mode,self.name))
         raise NotImplementedError("interface_type GPIO has not been implemented yet")
     
@@ -60,6 +119,7 @@ class Interface(loggable):
         elif self.interface_mode == "output":
             self._call_function = self._write_SPI
         else:
+            self.logger.critical("Invalid interface mode {} - Program closing".format(self.interface_mode))
             raise KeyError("Invalid interface mode {} in {}".format(self.interface_mode,self.name))
         raise NotImplementedError("interface_type SPI has not been implemented yet")
     
@@ -86,6 +146,7 @@ class Interface(loggable):
         elif self.interface_mode == "output":
             self._call_function = self._write_I2C
         else:
+            self.logger.critical("Invalid interface mode {} - Program closing".format(self.interface_mode))
             raise KeyError("Invalid interface mode {} in {}".format(self.interface_mode,self.name))
         raise NotImplementedError("interface_type I2C has not been implemented yet")
     
@@ -107,6 +168,7 @@ class Interface(loggable):
         Read a value from the interface
         '''
         if self.interface_mode != "input":
+            self.logger.critical("Attempting to call read on interface that is not configured to read - Program closing")
             raise EnvironmentError("{} is configured as an input, not an output. It is not possible to call read() on an output".format(self.name))
         return self._call_function()
 
@@ -115,6 +177,7 @@ class Interface(loggable):
         Write a value from the interface
         '''
         if self.interface_mode != "output":
+            self.logger.critical("Attempting to call write on interface that is not configured to write - Program closing")
             raise EnvironmentError("{} is configured as an output, not an input. It is not possible to call write() on an input".format(self.name))
         return self._call_function(value)
     
