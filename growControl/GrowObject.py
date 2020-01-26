@@ -1,9 +1,6 @@
-
-from growControl import utils
-from growControl.Interface import Interface
-
 import logging
 import time
+from growControl import Interface
 
 class GrowObject:
     '''
@@ -15,7 +12,6 @@ class GrowObject:
     # Default values are set here
     time_warmup = 0.
     time_run_every = 0.
-    interface_type = None
     interface = None
 
     def __init__(self,params,parent):
@@ -35,10 +31,11 @@ class GrowObject:
 
         self.__initialize_value__("time_warmup",params,default_value=self.time_warmup,required=False)
         self.__initialize_value__("time_run_every",params,default_value=self.time_run_every,required=False)
-        self.__initialize_value__("inferface_type",params,default_value=self.interface_type,required=False)
 
-        if self.interface_type is not None:
-            self.interface = Interface(params["interface"],self)
+        if "interface" in params:
+            if type(params["interface"]) is dict:
+                if "interface_type" in params["interface"]:
+                    self.interface = Interface.Interface(params["interface"],self)
 
         self.time_previous = time.time()
 

@@ -24,24 +24,6 @@ class Sensor(GrowObject):
         parent is the parent object, likely an instance of World or GrowObject
         '''
         super().__init__(params,parent)
-        
-        # Settings that are specific to a Sensor
-        # maximum number of times to retry a reading
-        self.__initialize_value__("max_retry_count",params,default_value=0,required=False)
-
-        self.value_converter = ValueConverter(params["value_converter"],self)
-
-
-        self.counter_retries = 0 # how many times has it tried to do a reading and failed in a row
-
-
-    def _read_sensor(self):
-        '''
-        This class must be defined for each sensor
-        This method updates the internal variable self.value
-        '''
-        print("The _read_sensor class must be defined in the subclass")
-        raise NotImplementedError
 
     def _conversion_function(self,raw_value):
         '''
@@ -52,27 +34,90 @@ class Sensor(GrowObject):
 
     def update(self):
         '''
-        Call the sensor device's read value
-        Update the rolling average and the self.value variable
-        This method must be called constantly to keep the data up to date
+        Read the current value from the sensor's interface, run it through the conversion function and return
+            the dict containing its name, the time of the reading, the raw value, and the converted value
         '''
-        # read in the sensor value, calculate the moving average, then call save function
-        if self.debug_from_file:
-            self.buffer.update(self.debug_data.next())
-        else:
-            raw_value = self._read_sensor()
-            self.buffer.update(raw_value)
-        self._value = self.buffer.average
-        print("v_raw: {:<7.4f} v_avg: {:<7.4f} ph_raw: {:<6.2f} ph_avg: {:<6.2f}".format(self.buffer.value,self.buffer.average,self._conversion_function(self.buffer.value),self._conversion_function(self.buffer.average)))
-    
-    @property
-    def value(self):
+        raw_value = self.interface.read()
+        value = self._conversion_function(raw_value)
+        
+        result = {}
+        result["name"] = self.name
+        result["parent name"] = self.parent.name if self.parent is not None else None
+        result["time"] = time.time()
+        result["value"] = value
+        result["raw_value"] = raw_value
+        
+        return result
+
+class Sensor_pH(Sensor):
+    '''
+    Implements a pH probe
+    '''
+
+    probe_bias = 0.0 # mV when pH= 7.0
+    probe_slope = 59.7 # mV/pH the pH changes 1 unit per this many mV
+
+    def __init__(self,params,parent):
+        super().__init__(params,parent)
+        self.__initialize_value__("probe_bias",params,default_value=self.probe_bias,required=False)
+        self.__initialize_value__("probe_slope",params,default_value=self.probe_slope,required=False)
+
+    def _conversion_function(self,raw_value):
         '''
-        Return the ph value converted from the current state of the sensor
-        This @property is created so that the object requesting this value can get it in a consistent way
-        https://www.programiz.com/python-programming/property
+        Convert from mV reading to pH for the probe
         '''
-        return self._conversion_function(self._value)
+        return self.probe_bias + raw_value*self.probe_slope
+
+class Sensor_TempHumidity(Sensor):
+    '''
+    Implements a combined temperature and humidity sensor
+    '''
+    def __init__(self,params,parent):
+        super().__init__(params,parent)
+
+    def update(self):
+        '''
+        Read the current value from the sensor's interface, run it through the conversion function and return
+            the dict containing its name, the time of the reading, the raw value, and the converted value
+        
+        Because the combined Temperature and Humidity sensor returns a tuple of (humidity,temp), need to treat
+            the update a little different
+            * No conversion values are needed - returned in real units (% RH and degrees Celcius)
+            * Return a list of 2 dicts, 1 for temp, 1 for humidity
+        '''
+        humidity,temp = self.interface.read()
+        
+        result_humidity = {}
+        result_humidity["name"] = self.name + "_humidity"
+        result_humidity["parent name"] = self.parent.name if self.parent is not None else None
+        result_humidity["time"] = time.time()
+        result_humidity["value"] = humidity
+        result_humidity["raw_value"] = humidity
+
+        result_temp = {}
+        result_temp["name"] = self.name + "_temperature"
+        result_temp["parent name"] = self.parent.name if self.parent is not None else None
+        result_temp["time"] = time.time()
+        result_temp["value"] = temp
+        result_temp["raw_value"] = temp
+
+        return [result_humidity,result_temp]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 class SensorPh_ADS1115(Sensor):
     '''

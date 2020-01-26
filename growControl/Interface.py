@@ -1,7 +1,7 @@
 import logging
-from growControl.GrowObject import GrowObject
+#from growControl import GrowObject
 
-class Interface(GrowObject):
+class Interface:
     '''
     Defines an interface to IO to read sensors or run controls
     Generic Settings:
@@ -14,26 +14,29 @@ class Interface(GrowObject):
         "ads1115_single_ended_input_pin":<"P0","P1","P2","P3">
         }
     '''
-    def __init__(self,interface_params,parent):
+    def __init__(self,params,parent):
         '''
         Create an instance of an interface
         '''
+        assert parent is not None, "All interfaces must have a parent!"
         self.name = "{}_interface".format(parent.name)
         self.parent = parent
         self.logger=logging.getLogger("{}-{}".format(self.parent,self.name))
         self.logger.info("Initializing object")
 
-        self.interface_type = interface_params["interface_type"]
-        self.interface_mode = interface_params["interface_mode"] # either "input" or "output"
+        self.interface_type = params["interface_type"]
+        self.interface_mode = params["interface_mode"] # either "input" or "output"
         
         if self.interface_type == "GPIO":
-            self._config_GPIO(interface_params)
+            self._config_GPIO(params)
         elif self.interface_type == "SPI":
-            self._config_SPI(interface_params)
+            self._config_SPI(params)
         elif self.interface_type == "I2C":
-            self._config_I2C(interface_params)
+            self._config_I2C(params)
         elif self.interface_type == "ads1115":
-            self._config_ads1115(interface_params)
+            self._config_ads1115(params)
+        elif self.interface_type == "csv":
+            self._config_csv(params)
         else:
             self.logger.critical("'interface_type' {} is not implemented - Program closing".format(self.interface_type))
             raise NotImplementedError("interface_type {} is not implemented in growControl.InterfaceType".format(self.interface_type))
@@ -81,6 +84,42 @@ class Interface(GrowObject):
         Read the current value from the ADS1115
         '''
         return self.data_stream.voltage
+
+
+    def _config_DHT(self,params):
+        '''
+        Configure reading from a DHT sensor
+        These things are really finicy and fail to respond in non-RTOS systems all the time
+        '''
+        import Adafruit_DHT
+
+        self.interface_mode = "input"
+        self._sensor_model = params["sensor_model"]
+        self._sensor_pin = params["GPIO_Pin"]
+        
+        self._retries = params["retries"] if "retries" in params else 10
+        self._retry_pauses = params["retry_pause"] if "retry_pause" in params else .1
+
+        if self._sensor_model == "DHT11":
+            self._sensor = Adafruit_DHT.DHT11
+        elif self._sensor_model == "DHT22":
+            self._sensor = Adafruit_DHT.DHT22
+        elif self._sensor_model == "AM2302":
+            self._sensor = Adafruit_DHT.AM2302
+        else:
+            raise ValueError("Invalid sensor_model {}. Expected DHT11, DHT22, or AM2302".format(self._sensor_model))
+            
+        self._call_function = self._read_DHT
+
+    def _read_DHT(self):
+        '''
+        Read the DHT sensor
+        '''
+        humidity,temp = Adafruit_DHT.read_retry(self._sensor,
+                                                self._sensor_pin,
+                                                retries=self._retries,
+                                                delay_seconds=self._retry_pauses)
+        return (humidity,temp)
 
     # GPIO interface code
     def _config_GPIO(self,params):
@@ -161,6 +200,61 @@ class Interface(GrowObject):
         Write value to I2C bus
         '''
         raise NotImplementedError()
+
+    def _config_csv(self,params):
+        '''
+        Configure a csv interface 
+        Assumes the csv file has 1 row of headers
+        '''
+        if self.interface_mode == "input":
+            self._call_function = self._read_csv
+            self._csv_data = None
+            self._csv_fname = params["fname"]
+            
+        elif self.interface_mode == "output":
+            self._call_function = self._write_csv
+            self._csv_fname = params["fname"]
+        else:
+            self.logger.critical("Invalid interface mode {} - Program closing".format(self.interface_mode))
+            raise KeyError("Invalid interface mode {} in {}".format(self.interface_mode,self.name))
+
+    def _read_csv(self):
+        '''
+        Read the next line from a csv
+        Returns a dict with keys of headers and the values from the current row
+        The first time the read method is called it will cache the entire file
+        '''
+        if self._csv_data is None:
+            self._csv_current_line = 0
+            with open(self._csv_fname,'r') as fp:
+                self._csv_data = fp.readlines()
+            self._csv_headers = self._csv_data[0].strip().split(",")
+        
+        self._csv_current_line += 1
+        if len(self._csv_data) >= self._csv_current_line:
+            raise EOFError("Requested line past the end of the csv file {}, file only has {} lines, requested line {}".format(self._csv_fname,len(data),self._csv_current_line))
+        
+        line = {}
+        for col_idx,key in enumerate(self._csv_headers):
+            line[key] = self._csv_data[self._csv_current_line][col_idx]
+        
+        return line
+    def _write_csv(self,data):
+        '''
+        Append the data to a csv file
+        If data is a string, just dump the string to the csv file
+        If data is a list, separate each value with a comma and dump to the file
+        '''
+        if type(data) is str:
+            output = data
+        elif type(data) is list:
+            output = ""
+            for value in data:
+                output += "{},".format(value)
+            output = output.strip(",")
+            output += "\n"
+        with open(self._csv_fname,'a') as fp:
+            fp.write(output)
 
     # These are the functions that the user interfaces with
     def read(self):
