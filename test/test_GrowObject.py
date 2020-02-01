@@ -3,7 +3,7 @@ import time
 
 from growControl import GrowObject
 
-class Test_GrowObject(unittest.TestCase):
+class test_GrowObject(unittest.TestCase):
 
     def test_init(self):
         '''

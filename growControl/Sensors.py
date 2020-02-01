@@ -32,7 +32,7 @@ class Sensor(GrowObject):
         '''
         return raw_value
 
-    def update(self):
+    def __call__(self):
         '''
         Read the current value from the sensor's interface, run it through the conversion function and return
             the dict containing its name, the time of the reading, the raw value, and the converted value
@@ -75,7 +75,7 @@ class Sensor_TempHumidity(Sensor):
     def __init__(self,params,parent):
         super().__init__(params,parent)
 
-    def update(self):
+    def __update__(self):
         '''
         Read the current value from the sensor's interface, run it through the conversion function and return
             the dict containing its name, the time of the reading, the raw value, and the converted value
@@ -115,7 +115,7 @@ class Sensor_TempHumidity(Sensor):
 
 
 
-
+# Items below here have not been update with latest Sensor 
 
 
 
