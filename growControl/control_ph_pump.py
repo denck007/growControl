@@ -3,7 +3,7 @@ import time
 import datetime
 import os
 
-from control_pump import Pump
+from controlable_pump import Pump
 
 
 class Controller_ph_pump:

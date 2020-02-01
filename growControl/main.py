@@ -8,7 +8,7 @@ Will control ph using 2 pumps
 import time
 
 from sensor_ph import Sensor_ph
-from control_pump import Pump
+from controlable_pump import Pump
 from control_ph_pump import Controller_ph_pump
 from sensor_humidity_temp import Sensor_humidity_temp
 
