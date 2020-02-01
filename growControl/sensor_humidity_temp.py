@@ -29,16 +29,7 @@ class Sensor_humidity_temp:
         if csv is None:
             self._initialize_sensor()
         else: # debugging
-            with open(csv,'r') as fp:
-                data = fp.readlines()
-            self.csv_data = []
-            for line in data:
-                humidity,temp = line.strip().split(",")
-                humidity = float(humidity) if humidity != 'None' else None
-                temp = float(temp) if temp != 'None' else None
-                self.csv_data.append((humidity,temp))
-            self.csv_current_position = 0
-            self._read_sensor = self._next_csv_value
+            self._initialize_sensor()
 
         self.temp = 20 # initialize to 20 degrees C
         self.humidity = 50 # initialize to 50% relative humidity
@@ -54,6 +45,22 @@ class Sensor_humidity_temp:
         value = self.csv_data[self.csv_current_position]
         self.csv_current_position += 1
         return value
+
+    def _initialize_csv(self,csv):
+        '''
+        Read in all the data from the csv file, set up self to read from csv instead of sensor
+        csv: path to valid csv file with mock readings
+        '''
+        with open(csv,'r') as fp:
+            data = fp.readlines()
+        self.csv_data = []
+        for line in data:
+            humidity,temp = line.strip().split(",")
+            humidity = float(humidity) if humidity != 'None' else None
+            temp = float(temp) if temp != 'None' else None
+            self.csv_data.append((humidity,temp))
+        self.csv_current_position = 0
+        self._read_sensor = self._next_csv_value
 
     def _initialize_sensor(self):
         '''

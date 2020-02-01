@@ -41,12 +41,7 @@ class Sensor_ph:
         if csv is None:
             self._initialize_ads1115()
         else: # debugging
-            with open(csv,'r') as fp:
-                data = fp.readlines()
-            self.csv_data = [float(item) for item in data]
-            self.csv_current_position = 0
-            self._read_sensor = self._next_csv_value
-            
+            self._initialize_csv(csv)
 
         self.last_reading = time.time() - self.read_every - 1 # make it so imediatly the data is out of date to force reading
 
@@ -63,7 +58,17 @@ class Sensor_ph:
         value = self.csv_data[self.csv_current_position]
         self.csv_current_position += 1
         return value
-
+    def _initialize_csv(self,csv):
+        '''
+        Read in all the data from the csv file, set up self to read from csv instead of sensor
+        csv: path to valid csv file with mock readings
+        '''
+        with open(csv,'r') as fp:
+            data = fp.readlines()
+        self.csv_data = [float(item) for item in data]
+        self.csv_current_position = 0
+        self._read_sensor = self._next_csv_value
+            
     def _initialize_ads1115(self):
         '''
         Initialize the sensor
