@@ -1,35 +1,32 @@
-# growControl
-This project is meant to be a general purpose monitoring and control tool for gardening systems. It is being developed for hydroponics but could be used for any type of gardening.
+# Simple Grow Controller
+The idea with this setup is to get a controller working very quickly at the expense of not being generic.
 
-For a hydroponic Kratky system with 2 tanks under the same light that uses the system to control the lights and has automatic ph dosing, the setup would look like:
-* World 
-  * Zone
-    * Sensors (temp, humidity,light)
-    * Controls (lights,fans,temperature)
-    * Pot1 (Things things that share the same growing medium, the ph and water temp is the same for all items in a pot)
-      * Sensors (liquid temp,ph)
-      * Controls (ph and temp)
-    * Pot2 (Things things that share the same growing medium, the ph and water temp is the same for all items in a pot)
-      * Sensors (liquid temp,ph)
-      * Controls (ph and temp)
+General outline:
+1) Initialize ph sensor, ph pump controller, and humidity/temp sensor
+2) In loop:
+   1) Read ph (if enough time has passed)
+   2) Control the ph if the ph sensor is reporting a value outside of range (if enough time has passed since last control)
+   3) Read the humidity and temp (if enough time has passed)
 
-## Description
-When the World object is created it creates all of the GrowObjects described in the setup.json file. The objects are created based on the "type" property. This type property must be implemented in the <Sensors/Environments/Controls> and included in the ImplementedGrowObjects dict at the bottom of the corresponding file. 
+* After every read the data is stored to disk in 1 csv file per sensor (humidity and temp are split into 2 files)
+* The sensors keep a running average of the current state using a weighted moving average
+ * Does not keep the history but does an update according to `running_average = weight*running_average + (1-weight)*new_reading`. THis means the value can lag some, but in the control of this system we are going to be recording every 30 seconds or so, and controlling every 30 minutes.
+ * 
 
-The main loop is run every World.main_loop_min_time (as set in the setup.json file). The main loop will be run AT MOST this often, but may be longer based on the duration of taking measurements, running controls, exporting data, etc.
+# Sensors:
 
-When the loop runs it will run world.update() which runs the update() function on every GrowObject (all GrowObjects have this, but it may not do anything). It just updates the internal state of objects and does not report anything. The world.run_controls() function is then run which runs the run_controls() method of any object that has the property directly_controllable set to True. 
+All sensors have the following parameters:
+* average_factor: range of (0,1), 1 per value read from sensor
+* read_every: float, minimum number of seconds between reading
+* last_reading: float, epoch of last reading, updated after each reading is taken, 1 value per value read from sensor
+* output_file: str of valid path
+ * Will create if does not exist
+ * Always appends to this file
 
-The world.report_data() method is then run which queries all devices to report their current state. Currently this is done by seeing if the object has the attribute "value", and if it does then reporting a dict that is defined in the GrowObject.py file. This is probably not the best way to do this and will likely change. The key part of this is when a Control type object is run, it may never be in a state to report out the control it is running (the ph pumps for example). So when a control object is run, it will report its action to the world.data dict and the action will be reflected in the next world.report_data() call. The world.data dict will then be cleared after the data is saved.
+Sensors are also expected to have an optional initialization parameter of a csv file path for testing. This file should have 1 row per reading, if the device returns multiple parameters, the order those parameters are returned in (ie in the tuple) should be obeyed in the file. When a csv is passed the sensor will simply substitue the normal sensor reading function with a call to read the next line of the csv.
 
-## Reporting Data
-A major goal of this project is to report out data in an easy to access format of the end user's choosing.
+# Controllers:
+Currently there is only the ph controller that runs pumps. This takes in the sensor that it is using to control from, and controls 2 pumps according to the sensor_ph.ph_avg value. If the ph is under the parameter self.ph_min, turn on the pump for the ph up solution. If the ph is over self.ph_max then turn on the pump for the ph down solution.  This controller is only expected to turn on the pumps for ~0.5seconds every hour if an adjustment is needed. Likely it will only turn on the pumps once a day or so. 
 
-
-
-# TODO
-* Change how data is reported when report_data is called in world
-  * Currently it reports the data stored in "value" for any object that has that attribute
-  * Would like it to call a report_data method on the objects which would allow more control over what is reported. It would also allow multi purpose sensors like temperature and humidity sensors to be on the same chip
-* Implement World.Save(). Will need to create world.data, and implement the reporting functionality in the Controls objects. 
-* Report raw, filtered, and unit converted data for sensors (for ph want the last voltage read, the smoothed ph reading, and the raw ph reading). 
+# Controllable devices:
+Currently the only controllable device is the peristaltic pump. When called it takes the duration it should run for and will turn the pump on for the specified time. This actions blocks any other code with a sleep.
