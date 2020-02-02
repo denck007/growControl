@@ -3,16 +3,16 @@ import os
 import time
 import datetime
 
-class Pump:
+class Controllable_Pump:
     '''
     Defines a peristaltic pump and the control of it
     '''
 
-    def __init__(self,gpio_address):
+    def __init__(self,gpio_address,verbose=False):
         '''
         Initialize a pump for control
         '''
-
+        self.verbose = verbose
         self.gpio_address = gpio_address
     
         self._initialize_gpio()
@@ -27,13 +27,15 @@ class Pump:
         '''
         Turn the pump on
         '''
-        print("{:.4f} turning pump on".format(time.time()))
+        if self.verbose:
+            print("{:.4f} turning pump on".format(time.time()))
 
     def _pump_off(self):
         '''
         Turn the pump off
         '''
-        print("{:.4f} turning pump off".format(time.time()))
+        if self.verbose:
+            print("{:.4f} turning pump off".format(time.time()))
 
     def __call__(self,time_on):
         '''
@@ -44,7 +46,7 @@ class Pump:
         self._pump_off()
         
 if __name__ == "__main__":
-    p = Pump()
+    p = Controllable_Pump(gpio_address=1,verbose=True)
 
     for ii in range(10):
         p(.1)

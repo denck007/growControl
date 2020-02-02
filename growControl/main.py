@@ -7,18 +7,17 @@ Will control ph using 2 pumps
 '''
 import time
 
-from sensor_ph import Sensor_ph
-from controlable_pump import Pump
-from control_ph_pump import Controller_ph_pump
-from sensor_humidity_temp import Sensor_humidity_temp
+from growControl import Sensor_ph
+from growControl import Controller_ph_Pump
+from growControl import Sensor_humidity_temp
 
 if __name__ == "__main__":
 
     ph_min = 5.9
     ph_max = 6.1
 
-    sensor_ph = Sensor_ph(csv="/home/neil/growControl/testing_input_files/voltages.csv")
-    controller_ph = Controller_ph_pump(sensor_ph)
+    sensor_ph = Sensor_ph(output_file="tmp_output_files/ph_{:.0f}".format(time.time()),csv="/home/neil/growControl/testing_input_files/voltages.csv")
+    controller_ph = Controller_ph_Pump(sensor_ph)
     sensor_ht = Sensor_humidity_temp(csv="/home/neil/growControl/testing_input_files/humidity_temp.csv")
 
     controller_ph.warmup_time = 0
