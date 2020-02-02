@@ -1,4 +1,4 @@
-time,temperature_raw,temperature_average
+time,datetime,datetime_timezone,temperature_raw,temperature_average
 0,_,_,20.5,20.05
 0.2,_,_,21.5,20.195
 0.3,_,_,22.5,20.4255

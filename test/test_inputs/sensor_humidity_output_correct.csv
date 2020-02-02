@@ -1,4 +1,4 @@
-time,relative_humidity_raw,relative_humidity_average
+time,datetime,datetime_timezone,relative_humidity_raw,relative_humidity_average
 0,_,_,50.5,50.1
 0.2,_,_,None,50.1
 0.3,_,_,51.5,50.38
