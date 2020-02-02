@@ -51,7 +51,7 @@ class test_Sensor_ph(TestCase):
                 t,_,_,v_raw,v_avg,ph_raw,ph_avg = line.strip("\n").split(",")
                 t_c,_,_,v_raw_c,v_avg_c,ph_raw_c,ph_avg_c = line_correct.strip("\n").split(",")
 
-                self.assertFloatsClose(float(t),float(t_c)+start_time,eps=.01) # Not really possible to gaurentee timesteps on order of 1ms
+                self.assertFloatsClose(float(t),float(t_c)+start_time,eps=.02) # Not really possible to gaurentee timesteps on order of 1ms
                 self.assertFloatsClose(float(v_avg),float(v_avg_c))
                 self.assertFloatsClose(float(ph_avg),float(ph_avg_c))
 

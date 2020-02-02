@@ -4,6 +4,12 @@ import os
 import sys
 import time
 
+try:
+    import Adafruit_DHT
+except:
+    print("In sensor_humidity_temp: Unable to import Adafruit_DHT" +\
+           "\tWill only able to run in csv mode!")
+
 class Sensor_humidity_temp:
     '''
     Read the temperature and humidity from a DHT11 or DHT22 sensor
@@ -31,8 +37,8 @@ class Sensor_humidity_temp:
         self.read_every = read_every # seconds, minimum time between readings
 
         self.verbose = verbose
-        self.sensor_model = "DHT11"
-        self.gpio_pin = -1
+        self.sensor_model = "DHT22"
+        self.gpio_pin = 18
         self.retries = 15 # number of times to try and read the sensor
         self.retry_pause = 0.1 # Time to wait between retries
 
@@ -83,8 +89,6 @@ class Sensor_humidity_temp:
         '''
         Initialize the interface for the sensor
         '''
-        import Adafruit_DHT
-
         if self.sensor_model == "DHT11":
             self._sensor = Adafruit_DHT.DHT11
         elif self.sensor_model == "DHT22":
@@ -150,15 +154,22 @@ class Sensor_humidity_temp:
 
 if __name__ == "__main__":
     
-    th = Sensor_humidity_temp(output_file_temp="tmp_output_files/temp_{:.0f}.csv".format(time.time()),
+    th_csv = Sensor_humidity_temp(output_file_temp="tmp_output_files/temp_{:.0f}.csv".format(time.time()),
                                 output_file_humidity="tmp_output_files/humidity_{:.0f}.csv".format(time.time()),
                                 read_every=1.0,
                                 average_factor_temp=0.9,
                                 average_factor_humidity=0.8,
                                 csv="test/test_inputs/sensor_humidity_temp_input.csv",
                                 verbose=True)
+    th_sensor = Sensor_humidity_temp(output_file_temp="tmp_output_files/temp_{:.0f}.csv".format(time.time()),
+                                output_file_humidity="tmp_output_files/humidity_{:.0f}.csv".format(time.time()),
+                                read_every=2.0,
+                                average_factor_temp=0.9,
+                                average_factor_humidity=0.8,
+                                csv=None,
+                                verbose=True)
 
     for ii in range(10):
         print()
-        th()
+        th_sensor()
         time.sleep(.5)

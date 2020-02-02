@@ -53,7 +53,7 @@ class test_Sensor_humidity_temp(TestCase):
             for line,line_correct in zip(data[1:],data_correct[1:]):
                 t,_,_,raw,ma = line.strip("\n").split(",")
                 t_c,_,_,raw_c,ma_c = line_correct.strip("\n").split(",")
-                self.assertFloatsClose(float(t),float(t_c)+start_time,eps=.005)
+                self.assertFloatsClose(float(t),float(t_c)+start_time,eps=.02)
                 if raw_c == "None":
                     self.assertEqual(raw,raw_c)
                 else:
@@ -69,16 +69,34 @@ class test_Sensor_humidity_temp(TestCase):
             for line,line_correct in zip(data[1:],data_correct[1:]):
                 t,_,_,raw,ma = line.strip("\n").split(",")
                 t_c,_,_,raw_c,ma_c = line_correct.strip("\n").split(",")
-                self.assertFloatsClose(float(t),float(t_c)+start_time,eps=.005)
+                self.assertFloatsClose(float(t),float(t_c)+start_time,eps=.02)
                 if raw_c == "None":
                     self.assertEqual(raw,raw_c)
                 else:
                     self.assertFloatsClose(float(raw),float(raw_c))
                 self.assertFloatsClose(float(ma),float(ma_c))
-
-
-            
-
+        finally:
+            os.remove(tmp_file_temp[1])
+            os.remove(tmp_file_humidity[1])
+    def test_sensor_humidity_temp_real_readings(self):
+        '''
+        Test that we can actually read from the sensor
+        '''
+        if os.uname().machine != "armv6l":
+            print("test_sensor_humidity_temp_real_readings only works on the raspberrypi!")
+            return
+        try:
+            tmp_file_temp = tempfile.mkstemp(suffix=".csv")
+            tmp_file_humidity = tempfile.mkstemp(suffix=".csv")
+            th = Sensor_humidity_temp(output_file_temp=tmp_file_temp[1],
+                                        output_file_humidity=tmp_file_humidity[1],
+                                        read_every=.15, # between loop_time and 2*loop_time
+                                        average_factor_temp=0.9,
+                                        average_factor_humidity=0.8,
+                                        csv=None,
+                                        verbose=True)
+            for ii in range(1):
+                th()
         finally:
             os.remove(tmp_file_temp[1])
             os.remove(tmp_file_humidity[1])

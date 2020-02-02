@@ -85,7 +85,7 @@ class test_Controller_ph_Pump(TestCase):
                  # make sure the times are saved correctly
                  # The looping logic ensures that a new loop is started every expected_loop_time
                  # t_c is relative to start of the run
-                self.assertFloatsClose(float(t),start_time+float(t_c),eps=.01)
+                self.assertFloatsClose(float(t),start_time+float(t_c),eps=.02)
 
                 self.assertFloatsClose(float(down_t),float(down_t_c))
                 self.assertFloatsClose(float(down_v),float(down_v_c))
