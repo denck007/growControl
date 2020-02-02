@@ -5,11 +5,11 @@ import datetime
 
 class Sensor_ph:
     '''
-    Defines tha ph sensor and interface
+    Defines a ph sensor and interface
     '''
     
 
-    def __init__(self,csv=None):
+    def __init__(self,output_file,average_factor=0.9,read_every=30.,csv=None,verbose=False):
         '''
         Create the instance of the ph sensor
          
@@ -17,17 +17,17 @@ class Sensor_ph:
             the csv file is a file with rows of a single float which is a voltage corresponding to a ph value
                 it should be the same as what data_stream.voltage would return
         '''
+        self.verbose = verbose
 
-        self.output_file = "/home/neil/growControl/output_files/ph_sensor.csv"
+        self.output_file = output_file#"/home/neil/growControl/output_files/ph_sensor.csv"
         os.makedirs(os.path.dirname(self.output_file),exist_ok=True)
         with open(self.output_file,'a') as fp:
             fp.write("time,datetime,datetime_timezone,voltage_raw,voltage_avg,ph_raw,ph_avg\n")        
 
         # how much of the previous value to keep result = previous * average_factor + new * (1-average_factor)
         #   A larger value makes it slower to respond but is more noise resistant
-        self.average_factor = 0.99 
-
-        self.read_every = 1.0 # seconds, minimum time between readings
+        self.average_factor = average_factor
+        self.read_every = read_every # seconds, minimum time between readings
 
         self.ads1115_gain =  8
         self.ads1115_data_sample_rate =  8
@@ -130,11 +130,16 @@ class Sensor_ph:
         output += "{},{},{},{}\n".format(voltage,self.voltage_avg,ph,self.ph_avg)
         with open(self.output_file,'a') as fp:
             fp.write(output)
-        print("{:.4f}: ph {:.2f}".format(time.time(),ph))
+
+        if self.verbose:
+            print("{:.4f}: ph {:.2f}".format(time.time(),ph))
         return ph
 
 if __name__ == "__main__":
-    s = Sensor_ph(csv="/home/neil/growControl/testing_input_files/voltages.csv")
+    s = Sensor_ph(output_file="tmp_output_files/ph_{:.0f}.csv".format(time.time()),
+                    read_every=1.0,
+                    csv="test/test_inputs/sensor_ph_sinewave01_voltage.csv",
+                    verbose=True)
 
     for ii in range(20):
         s()
