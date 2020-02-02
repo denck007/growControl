@@ -4,6 +4,17 @@ import os
 import sys
 import time
 
+try:
+    import board
+    import busio
+    import adafruit_ads1x15.ads1115 as ADS
+    from adafruit_ads1x15.analog_in import AnalogIn
+    from adafruit_ads1x15.ads1x15 import Mode
+except:
+    print("Sensor_ph: Unable to import raspberry pi specific modules" +\
+           "\tWill only be able to run in csv mode!")
+        
+
 class Sensor_ph:
     '''
     Defines a ph sensor and interface
@@ -78,12 +89,6 @@ class Sensor_ph:
         '''
         Initialize the sensor
         '''
-        import board
-        import busio
-        import adafruit_ads1x15.ads1115 as ADS
-        from adafruit_ads1x15.analog_in import AnalogIn
-        from adafruit_ads1x15.ads1x15 import Mode
-        
         self.ads1115_i2c = busio.I2C(board.SCL,board.SDA)
         self.ads1115 = ADS.ADS1115(self.ads1115_i2c)
         # Gain for the system: voltage range:
@@ -94,7 +99,7 @@ class Sensor_ph:
         #   8: 0.512V
         #  16: 0.256V
         self.ads1115.gain = self.ads1115_gain
-        self.ads1115.mode = Mode.CONTINIOUS
+        self.ads1115.mode = Mode.CONTINUOUS
         self.ads1115.data_rate = self.ads1115_data_sample_rate # datarates in samples/secs:8,16,32,64,128,250,475,860
 
         self.data_stream = AnalogIn(self.ads1115,self.ads1115_single_ended_input_pin)
@@ -105,7 +110,7 @@ class Sensor_ph:
         Read the value from the real sensor
         '''
         try:
-            value = self.data_stream.voltage()
+            value = self.data_stream.voltage
         except:
             e = sys.exc_info()
             print("Exception thrown while reading ph probe:")
@@ -155,15 +160,22 @@ class Sensor_ph:
             fp.write(output)
 
         if self.verbose:
-            print("{:.4f}: ph {:.2f}".format(time.time(),ph))
+            if type(ph) is float:
+                print("{:.4f}: ph {:.2f}".format(time.time(),ph))
+            else:
+                print("{:.4f}: ph {}".format(time.time(),ph))
         return ph
 
 if __name__ == "__main__":
-    s = Sensor_ph(output_file="tmp_output_files/ph_{:.0f}.csv".format(time.time()),
+    s_csv = Sensor_ph(output_file="tmp_output_files/ph_{:.0f}.csv".format(time.time()),
                     read_every=1.0,
                     csv="test/test_inputs/sensor_ph_sinewave01_voltage.csv",
                     verbose=True)
+    s_sensor = Sensor_ph(output_file="tmp_output_files/ph_{:.0f}.csv".format(time.time()),
+                    read_every=1.0,
+                    csv=None,
+                    verbose=True)
 
     for ii in range(20):
-        s()
+        s_sensor()
         time.sleep(.5)

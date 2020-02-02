@@ -18,10 +18,14 @@ class test_Sensor_ph(TestCase):
         delta = abs(a-b)
         self.assertTrue(delta < eps,msg="Floats {} and {} are not within {} of eachother.".format(a,b,eps))
 
-    def test_simple_init(self):
+    def test_sensor_ph_csv(self):
         '''
-        Verify that the basic initialization code works
-        Verifies the moving averge code works
+        Verifies:
+            * Recorded time is correct
+            * Recorded values (raw and average) are correct
+            * A reading of None does not terminate the run
+            * Moving average handles reading None
+            * read_every works properly
         '''
         
         try:
@@ -68,3 +72,61 @@ class test_Sensor_ph(TestCase):
             raise
         finally:
             os.remove(tmp_file[1])
+
+    def test_sensor_ph_real_sensor(self):
+        '''
+        Verifies:
+            * Recorded time is correct
+        '''
+        
+        try:
+            tmp_file = tempfile.mkstemp(suffix=".csv")
+            s = Sensor_ph(output_file=tmp_file[1],
+                            average_factor=0.9,
+                            read_every=0.,
+                            csv=None,
+                            verbose=False)
+
+            start_time = time.time()
+            for ii in range(2):
+                s()
+            with open(tmp_file[1],'r') as fp:
+                data = fp.readlines()
+            with open("test/test_inputs/sensor_ph_output_correct.csv",'r') as fp:
+                header_correct = fp.readline()
+            
+            self.assertEqual(data[0],header_correct)
+            none_counter_voltage = 0
+            none_counter_ph = 0
+            for line in data[1:]:
+                t, dt, dt_tz, v_raw, v_avg, ph_raw, ph_avg = line.strip("\n").split(",")
+                if v_raw == "None":
+                    none_counter_voltage +=1
+                else: 
+                    #If the items cannot be converted to float an error will be thrown
+                    v_raw = float(v_raw)
+                    v_avg = float(v_avg)
+                    self.assertTrue(v_raw > -0.2,msg="Raw voltage should be over -0.2v (~3.5ph)")
+                    self.assertTrue(v_raw < 0.2,msg="Raw voltage should be under 0.2v (~10.5ph)")
+                    self.assertTrue(v_avg > -0.2,msg="Average voltage should be over -0.2v (~3.5ph)")
+                    self.assertTrue(v_avg < 0.2,msg="Average voltage should be under 0.2v (~10.5ph)")
+
+                if ph_raw == "None":
+                    none_counter +=1
+                else: 
+                    #If the items cannot be converted to float an error will be thrown
+                    ph_raw = float(ph_raw)
+                    ph_avg = float(ph_avg)
+                    self.assertTrue(ph_raw > 3.5,msg="Raw ph should be over -0.2v (~3.5ph)")
+                    self.assertTrue(ph_raw < 10.5,msg="Raw ph should be under 0.2v (~10.5ph)")
+                    self.assertTrue(ph_avg > 3.5,msg="Average ph should be over 3.5ph")
+                    self.assertTrue(ph_avg < 10.5,msg="Average ph should be under 10.5ph")
+
+            self.assertFalse(none_counter_voltage >= len(data)-2,msg="Output file must have at least 1 non-'None' value for voltage")
+            self.assertFalse(none_counter_ph >= len(data)-2,msg="Output file must have at least 1 non-'None' value for ph")
+
+
+
+        finally:
+            os.remove(tmp_file[1])
+
