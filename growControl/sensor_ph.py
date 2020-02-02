@@ -58,7 +58,8 @@ class Sensor_ph:
         '''
         with open(csv,'r') as fp:
             data = fp.readlines()
-        self.csv_data = [float(item) for item in data]
+        data = [line.strip("\n") for line in data]
+        self.csv_data = [item if item=="None" else float(item) for item in data]
         self.csv_current_position = 0
         self._read = self._read_csv
     
@@ -68,6 +69,8 @@ class Sensor_ph:
         This lets us test without needing the sensor hooked up
         '''
         value = self.csv_data[self.csv_current_position]
+        if value == "None":
+            value = None
         self.csv_current_position += 1
         return value
         
@@ -133,11 +136,17 @@ class Sensor_ph:
             return
     
         voltage = self._read()
-        ph = self.convert_voltage_to_ph(voltage)
-        self.last_reading = current_time # update so we will not read next loop
-
-        self.voltage_avg = self.voltage_avg * self.average_factor + voltage * (1-self.average_factor)
-        self.ph_avg = self.ph_avg * self.average_factor + ph * (1-self.average_factor)
+        if voltage is None:
+            ph = None
+        else:
+            ph = self.convert_voltage_to_ph(voltage)
+            self.last_reading = current_time # Only change if a valid voltage is read
+        
+        # If there was an error reading voltage is none. 
+        #   In this case we do not want to update the moving average
+        if voltage is not None: 
+            self.voltage_avg = self.voltage_avg * self.average_factor + voltage * (1-self.average_factor)
+            self.ph_avg = self.ph_avg * self.average_factor + ph * (1-self.average_factor)
 
         #fp.write("time,datetime,datetime_timezone,voltage_raw,voltage_avg,ph_raw,ph_avg\n")
         output = "{},{},{},".format(time.time(),datetime.datetime.now(),datetime.datetime.now().astimezone())
