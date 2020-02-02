@@ -7,18 +7,34 @@ class Sensor_humidity_temp:
     '''
     Read the temperature and humidity from a DHT11 or DHT22 sensor
     '''
-    def __init__(self,csv=None):
+    def __init__(self,output_file_temp,output_file_humidity,read_every=30.0,average_factor_temp=0.9,average_factor_humidity=0.9,csv=None,verbose=False):
+        '''
+        output_file_temp: Path to the output for the temperature data
+        output_file_humidity: Path to the output for the humidity data
+
+        read_every: Float, minimum seconds time between successful readings
+        average_factor_temp: [Float,Float), How much emphasis is put on old vs new data. Higher value will do better with more noise, but it will lag more
+            if the temperature changes quickly
+        average_factor_humidity: [Float,Float), How much emphasis is put on old vs new data. Higher value will do better with more noise, but it will lag more
+            if the humidity changes quickly
+        csv: Path to file containting raw readings, used for debugging. Must have 2 values per row separated by a comma, first is humidity, second is temperature
+            File must end with a new line, and not have excess blank rows.
+        verbose: Output the reading whenever one is taken 
+        '''
+
+        self.output_file_temp = output_file_temp
+        self.output_file_humidity = output_file_humidity
+
+        self.average_factor_temp = average_factor_temp
+        self.average_factor_humidity = average_factor_humidity
+        self.read_every = read_every # seconds, minimum time between readings
+
+        self.verbose = verbose
         self.sensor_model = "DHT11"
         self.gpio_pin = -1
         self.retries = 15 # number of times to try and read the sensor
         self.retry_pause = 0.1 # Time to wait between retries
 
-        self.average_factor_temp = 0.99 
-        self.average_factor_humidity = 0.99 
-        self.read_every = 1.0 # seconds, minimum time between readings
-
-        self.output_file_temp = "/home/neil/growControl/output_files/temp_sensor.csv"
-        self.output_file_humidity = "/home/neil/growControl/output_files/humidity_sensor.csv"
         os.makedirs(os.path.dirname(self.output_file_temp),exist_ok=True)
         os.makedirs(os.path.dirname(self.output_file_humidity),exist_ok=True)
         with open(self.output_file_temp,'a') as fp:
@@ -29,7 +45,7 @@ class Sensor_humidity_temp:
         if csv is None:
             self._initialize_sensor()
         else: # debugging
-            self._initialize_sensor()
+            self._initialize_csv(csv)
 
         self.temp = 20 # initialize to 20 degrees C
         self.humidity = 50 # initialize to 50% relative humidity
@@ -119,13 +135,20 @@ class Sensor_humidity_temp:
         with open(self.output_file_temp,'a') as fp:
             fp.write(output)
         
-        print("{:.4f} Humidity: {} {}".format(time.time(),humidity,self.humidity))
-        print("{:.4f} Temp: {} {}".format(time.time(),temp,self.temp))
+        if self.verbose:
+            print("{:.4f} Humidity: {} {}".format(time.time(),humidity,self.humidity))
+            print("{:.4f} Temp: {} {}".format(time.time(),temp,self.temp))
 
 
 if __name__ == "__main__":
     
-    th = Sensor_humidity_temp(csv="/home/neil/growControl/testing_input_files/humidity_temp.csv")
+    th = Sensor_humidity_temp(output_file_temp="tmp_output_files/temp_{:.0f}.csv".format(time.time()),
+                                output_file_humidity="tmp_output_files/humidity_{:.0f}.csv".format(time.time()),
+                                read_every=1.0,
+                                average_factor_temp=0.9,
+                                average_factor_humidity=0.8,
+                                csv="test/test_inputs/sensor_humidity_temp_input.csv",
+                                verbose=True)
 
     for ii in range(10):
         print()
