@@ -31,15 +31,15 @@ class test_Sensor_humidity_temp(TestCase):
             tmp_file_humidity = tempfile.mkstemp(suffix=".csv")
             th = Sensor_humidity_temp(output_file_temp=tmp_file_temp[1],
                                         output_file_humidity=tmp_file_humidity[1],
-                                        read_every=.9, # between loop_time and 2*loop_time
+                                        read_every=.15, # between loop_time and 2*loop_time
                                         average_factor_temp=0.9,
                                         average_factor_humidity=0.8,
                                         csv="test/test_inputs/sensor_humidity_temp_input.csv",
                                         verbose=False)
             
-            loop_time = 0.05
+            loop_time = .1
             start_time = time.time()
-            for ii in range(13):
+            for ii in range(11):
                 th()
                 loop_end = time.time()
                 time.sleep(start_time+(ii+1)*loop_time - loop_end)
@@ -54,7 +54,7 @@ class test_Sensor_humidity_temp(TestCase):
                 t,_,_,raw,ma = line.strip("\n").split(",")
                 t_c,_,_,raw_c,ma_c = line_correct.strip("\n").split(",")
                 self.assertFloatsClose(float(t),float(t_c)+start_time,eps=.005)
-                if t == "None":
+                if raw_c == "None":
                     self.assertEqual(raw,raw_c)
                 else:
                     self.assertFloatsClose(float(raw),float(raw_c))
@@ -70,7 +70,7 @@ class test_Sensor_humidity_temp(TestCase):
                 t,_,_,raw,ma = line.strip("\n").split(",")
                 t_c,_,_,raw_c,ma_c = line_correct.strip("\n").split(",")
                 self.assertFloatsClose(float(t),float(t_c)+start_time,eps=.005)
-                if t == "None":
+                if raw_c == "None":
                     self.assertEqual(raw,raw_c)
                 else:
                     self.assertFloatsClose(float(raw),float(raw_c))
