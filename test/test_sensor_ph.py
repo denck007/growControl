@@ -26,47 +26,44 @@ class test_Sensor_ph(TestCase):
         
         try:
             tmp_file = tempfile.mkstemp(suffix=".csv")
-            s = Sensor_ph(output_file=tmp_file[1],csv="test/test_inputs/sensor_ph_sinewave01_voltage.csv",verbose=False)
-            s.average_factor = 0.9 # make sure that nothing has changed internal
-            s.read_every = 0. #have to override values
-            s.last_reading = 0. # reset to we dont miss the first values
+            s = Sensor_ph(output_file=tmp_file[1],
+                            average_factor=0.9,
+                            read_every=0.15,
+                            csv="test/test_inputs/sensor_ph_input.csv",
+                            verbose=False)
 
-            # load in the solution files for voltage and ph, both the raw and moving average versions
-            with open("test/test_inputs/sensor_ph_sinewave01_voltage_ma0.9.csv",'r') as fp:
-                data = fp.readlines()
-            voltage_ma_correct = [float(item.strip("\n")) for item in data]
-            with open("test/test_inputs/sensor_ph_sinewave01_voltage.csv",'r') as fp:
-                data = fp.readlines()
-            voltage_raw_correct = [float(item.strip("\n")) for item in data]
-
-            with open("test/test_inputs/sensor_ph_sinewave01_ph_ma0.9.csv",'r') as fp:
-                data = fp.readlines()
-            ph_ma_correct = [float(item.strip("\n")) for item in data]
-            with open("test/test_inputs/sensor_ph_sinewave01_ph.csv",'r') as fp:
-                data = fp.readlines()
-            ph_raw_correct = [float(item.strip("\n")) for item in data]
-            
-            # Test that the moving average is correct every step of the way
-            for v,ph in zip(voltage_ma_correct,ph_ma_correct):
+            loop_time = 0.1
+            start_time = time.time()
+            for ii in range(20):
                 s()
-                self.assertFloatsClose(s.voltage_avg,v)
-                self.assertFloatsClose(s.ph_avg,ph)
-            
-            # now validate the result in the output file is correct
+                loop_end = time.time()
+                time.sleep(start_time+(ii+1)*loop_time - loop_end)
+
             with open(tmp_file[1],'r') as fp:
                 data = fp.readlines()
-                data = data[1:] # skip headers
-            
-            # Go through the output file and make sure all the data is correct
-            #fp.write("time,datetime,datetime_timezone,voltage_raw,voltage_avg,ph_raw,ph_avg\n")
-            for line, v_ma_c, v_raw_c, ph_ma_c, ph_raw_c in zip(data, voltage_ma_correct, voltage_raw_correct, ph_ma_correct, ph_raw_correct):
-                t, dt, dt_tz, v_raw, v_avg, ph_raw, ph_avg = line.strip("\n").split(",")
-                self.assertFloatsClose(float(t),time.time(),eps=3.) # check that the time is within 3 seconds of now
+            with open("test/test_inputs/sensor_ph_output_correct.csv",'r') as fp:
+                data_correct = fp.readlines()
 
-                self.assertFloatsClose(float(v_raw),  float(v_raw_c))
-                self.assertFloatsClose(float(v_avg),  float(v_ma_c))
-                self.assertFloatsClose(float(ph_raw), float(ph_raw_c))
-                self.assertFloatsClose(float(ph_avg), float(ph_ma_c))
+            # Verify header is correct
+            self.assertEqual(data[0],data_correct[0])
+
+            for line,line_correct in zip(data[1:],data_correct[1:]):
+                t,_,_,v_raw,v_avg,ph_raw,ph_avg = line.strip("\n").split(",")
+                t_c,_,_,v_raw_c,v_avg_c,ph_raw_c,ph_avg_c = line_correct.strip("\n").split(",")
+
+                self.assertFloatsClose(float(t),float(t_c)+start_time,eps=.01) # Not really possible to gaurentee timesteps on order of 1ms
+                self.assertFloatsClose(float(v_avg),float(v_avg_c))
+                self.assertFloatsClose(float(ph_avg),float(ph_avg_c))
+
+                if v_raw == "None": # check case where a bad raw value exists
+                    self.assertEqual(v_raw,v_raw_c)
+                else:
+                    self.assertFloatsClose(float(v_raw),float(v_raw_c))
+
+                if ph_raw == "None": # check case where a bad raw value exists
+                    self.assertEqual(ph_raw,ph_raw_c)
+                else:
+                    self.assertFloatsClose(float(ph_raw),float(ph_raw_c))
         except:
             raise
         finally:
