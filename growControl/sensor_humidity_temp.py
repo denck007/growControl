@@ -45,9 +45,9 @@ class Sensor_humidity_temp:
         os.makedirs(os.path.dirname(self.output_file_temp),exist_ok=True)
         os.makedirs(os.path.dirname(self.output_file_humidity),exist_ok=True)
         with open(self.output_file_temp,'a') as fp:
-            fp.write("time,temperature_raw,temperature_average\n")   
+            fp.write("time,datetime,datetime_timezone,temperature_raw,temperature_average\n")   
         with open(self.output_file_humidity,'a') as fp:
-            fp.write("time,relative_humidity_raw,relative_humidity_average\n")   
+            fp.write("time,datetime,datetime_timezone,relative_humidity_raw,relative_humidity_average\n")   
 
         if csv is None:
             self._initialize_sensor()

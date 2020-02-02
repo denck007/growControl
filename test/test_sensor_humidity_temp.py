@@ -78,6 +78,7 @@ class test_Sensor_humidity_temp(TestCase):
         finally:
             os.remove(tmp_file_temp[1])
             os.remove(tmp_file_humidity[1])
+
     def test_sensor_humidity_temp_real_readings(self):
         '''
         Test that we can actually read from the sensor
@@ -90,13 +91,59 @@ class test_Sensor_humidity_temp(TestCase):
             tmp_file_humidity = tempfile.mkstemp(suffix=".csv")
             th = Sensor_humidity_temp(output_file_temp=tmp_file_temp[1],
                                         output_file_humidity=tmp_file_humidity[1],
-                                        read_every=.15, # between loop_time and 2*loop_time
+                                        read_every=.15,
                                         average_factor_temp=0.9,
-                                        average_factor_humidity=0.8,
+                                        average_factor_humidity=0.9,
                                         csv=None,
-                                        verbose=True)
-            for ii in range(1):
+                                        verbose=False)
+
+            start_time = time.time()
+            for ii in range(2):
                 th()
+
+            with open(tmp_file_temp[1],'r') as fp:
+                data = fp.readlines()
+            with open("test/test_inputs/sensor_temp_output_correct.csv",'r') as fp:
+                header_correct = fp.readline()
+            
+            self.assertEqual(data[0],header_correct)
+            none_counter = 0
+            for line in data[1:]:
+                t, dt, dt_tz, raw, avg = line.strip("\n").split(",")
+                if raw == "None":
+                    none_counter +=1
+                else: 
+                    #If the items cannot be converted to float an error will be thrown
+                    raw = float(raw)
+                    avg = float(avg)
+                    self.assertTrue(raw > 0.,msg="Raw temperature should be greater than 0C")
+                    self.assertTrue(raw < 40.,msg="Raw temperature should be less than 40C")
+                    self.assertTrue(avg > 0.,msg="Average temperature should be greater than 0C")
+                    self.assertTrue(avg < 40.,msg="Average temperature should be less than 40C")
+            self.assertFalse(none_counter >= len(data)-1,msg="Every reading in output file is 'None'")
+
+            with open(tmp_file_humidity[1],'r') as fp:
+                data = fp.readlines()
+            with open("test/test_inputs/sensor_humidity_output_correct.csv",'r') as fp:
+                header_correct = fp.readline()
+            
+            self.assertEqual(data[0],header_correct)
+            none_counter = 0
+            for line in data[1:]:
+                t, dt, dt_tz, raw, avg = line.strip("\n").split(",")
+                if raw == "None":
+                    none_counter +=1
+                else: 
+                    #If the items cannot be converted to float an error will be thrown
+                    raw = float(raw)
+                    avg = float(avg)
+                    self.assertTrue(raw > 0.,msg="Raw humidity should be greater than 0%")
+                    self.assertTrue(raw < 100.,msg="Raw humidity should be less than 100%")
+                    self.assertTrue(avg > 0.,msg="Average humidity should be greater than 0%")
+                    self.assertTrue(avg < 100.,msg="Average humidity should be less than 100%")
+            self.assertFalse(none_counter >= len(data)-1,msg="Every reading in output file is 'None'")
+
+
         finally:
             os.remove(tmp_file_temp[1])
             os.remove(tmp_file_humidity[1])
