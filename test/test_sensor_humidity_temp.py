@@ -120,7 +120,7 @@ class test_Sensor_humidity_temp(TestCase):
                     self.assertTrue(raw < 40.,msg="Raw temperature should be less than 40C")
                     self.assertTrue(avg > 0.,msg="Average temperature should be greater than 0C")
                     self.assertTrue(avg < 40.,msg="Average temperature should be less than 40C")
-            self.assertFalse(none_counter >= len(data)-1,msg="Every reading in output file is 'None'")
+            self.assertFalse(none_counter >= len(data)-2,msg="Every reading in output file is 'None'")
 
             with open(tmp_file_humidity[1],'r') as fp:
                 data = fp.readlines()
@@ -141,7 +141,7 @@ class test_Sensor_humidity_temp(TestCase):
                     self.assertTrue(raw < 100.,msg="Raw humidity should be less than 100%")
                     self.assertTrue(avg > 0.,msg="Average humidity should be greater than 0%")
                     self.assertTrue(avg < 100.,msg="Average humidity should be less than 100%")
-            self.assertFalse(none_counter >= len(data)-1,msg="Every reading in output file is 'None'")
+            self.assertFalse(none_counter >= len(data)-2,msg="Every reading in output file is 'None'")
 
 
         finally:
