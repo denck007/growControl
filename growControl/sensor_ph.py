@@ -1,7 +1,8 @@
 
-import os
-import time
 import datetime
+import os
+import sys
+import time
 
 class Sensor_ph:
     '''
@@ -50,14 +51,6 @@ class Sensor_ph:
 
         self._set_calibration_params()
 
-    def _next_csv_value(self):
-        '''
-        Return the next value from a csv
-        This lets us test without needing the sensor hooked up
-        '''
-        value = self.csv_data[self.csv_current_position]
-        self.csv_current_position += 1
-        return value
     def _initialize_csv(self,csv):
         '''
         Read in all the data from the csv file, set up self to read from csv instead of sensor
@@ -67,8 +60,17 @@ class Sensor_ph:
             data = fp.readlines()
         self.csv_data = [float(item) for item in data]
         self.csv_current_position = 0
-        self._read_sensor = self._next_csv_value
-            
+        self._read = self._read_csv
+    
+    def _read_csv(self):
+        '''
+        Return the next value from a csv
+        This lets us test without needing the sensor hooked up
+        '''
+        value = self.csv_data[self.csv_current_position]
+        self.csv_current_position += 1
+        return value
+        
     def _initialize_ads1115(self):
         '''
         Initialize the sensor
@@ -93,8 +95,21 @@ class Sensor_ph:
         self.ads1115.data_rate = self.ads1115_data_sample_rate # datarates in samples/secs:8,16,32,64,128,250,475,860
 
         self.data_stream = AnalogIn(self.ads1115,self.ads1115_single_ended_input_pin)
-        self._read_sensor = self.data_stream.voltage
+        self._read = self._read_sensor
     
+    def _read_sensor(self):
+        '''
+        Read the value from the real sensor
+        '''
+        try:
+            value = self.data_stream.voltage()
+        except:
+            e = sys.exc_info()
+            print("Exception thrown while reading ph probe:")
+            print("{}: {}".format(e[0],e[1]))
+            value = None
+        return value
+
     def _set_calibration_params(self):
         '''
         Set the calibration parameters from a file
@@ -106,7 +121,6 @@ class Sensor_ph:
         '''
         Using the calibration values convert the voltage to a ph value
         '''
-
         return self.calibration_value_m * voltage + self.calibration_value_b
 
     def __call__(self):
@@ -118,7 +132,7 @@ class Sensor_ph:
             # not enough time has passed since last reading, just return
             return
     
-        voltage = self._read_sensor()
+        voltage = self._read()
         ph = self.convert_voltage_to_ph(voltage)
         self.last_reading = current_time # update so we will not read next loop
 

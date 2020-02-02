@@ -1,7 +1,8 @@
 
-import os
-import time
 import datetime
+import os
+import sys
+import time
 
 class Sensor_humidity_temp:
     '''
@@ -53,15 +54,6 @@ class Sensor_humidity_temp:
         self.last_reading_temp = time.time() - self.read_every - 1 # make it so imediatly the data is out of date to force reading
         self.last_reading_humidity = time.time() - self.read_every - 1 # make it so imediatly the data is out of date to force reading
 
-    def _next_csv_value(self):
-        '''
-        Return the next value from a csv
-        This lets us test without needing the sensor hooked up
-        '''
-        value = self.csv_data[self.csv_current_position]
-        self.csv_current_position += 1
-        return value
-
     def _initialize_csv(self,csv):
         '''
         Read in all the data from the csv file, set up self to read from csv instead of sensor
@@ -76,7 +68,16 @@ class Sensor_humidity_temp:
             temp = float(temp) if temp != 'None' else None
             self.csv_data.append((humidity,temp))
         self.csv_current_position = 0
-        self._read_sensor = self._next_csv_value
+        self._read = self._read_csv
+
+    def _read_csv(self):
+        '''
+        Return the next value from a csv
+        This lets us test without needing the sensor hooked up
+        '''
+        value = self.csv_data[self.csv_current_position]
+        self.csv_current_position += 1
+        return value
 
     def _initialize_sensor(self):
         '''
@@ -93,18 +94,25 @@ class Sensor_humidity_temp:
         else:
             raise ValueError("Invalid sensor_model {}. Expected DHT11, DHT22, or AM2302".format(self.sensor_model))
             
-        self._read_sensor = self._read_DHT
+        self._read = self._read_sensor
 
-    def _read_DHT(self):
+    def _read_sensor(self):
         '''
         Attempt to read the humidity and temp
         Return (humidity,temp) values in %RH and degrees C
             If it fails to read then returns (None,None)
         '''
-        humidity,temp = Adafruit_DHT.read_retry(self._sensor,
-                                        self.gpio_pin,
-                                        retries=self.retries,
-                                        delay_seconds=self.retry_pause)
+        try:
+            humidity,temp = Adafruit_DHT.read_retry(self._sensor,
+                                            self.gpio_pin,
+                                            retries=self.retries,
+                                            delay_seconds=self.retry_pause)
+        except:
+            e = sys.exc_info()
+            print("Exception thrown while reading humidity and temperature:")
+            print("{}: {}".format(e[0],e[1]))
+            humidity = None
+            temp = None
         return (humidity,temp)
 
     def __call__(self):
@@ -117,7 +125,7 @@ class Sensor_humidity_temp:
         if current_time - self.read_every < min(self.last_reading_temp,self.last_reading_humidity):
             return
 
-        humidity,temp = self._read_sensor()
+        humidity,temp = self._read()
 
         if humidity is not None:
             self.humidity = self.humidity * self.average_factor_humidity + humidity * (1-self.average_factor_humidity)
