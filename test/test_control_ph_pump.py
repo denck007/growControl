@@ -34,8 +34,8 @@ class test_Controller_ph_Pump(TestCase):
                             average_factor=0., # this will make no averaging happen
                             read_every=0.0, # read every chance it gets
                             csv="test/test_inputs/controller_ph_pump_test_ph_input_file.csv")
-            pump_up = Controllable_Pump(-1)
-            pump_down = Controllable_Pump(-2)
+            pump_up = Controllable_Pump(gpio_pin=None)
+            pump_down = Controllable_Pump(gpio_pin=None)
 
             tmp_file_controller = tempfile.mkstemp(suffix=".csv")
             controller = Controller_ph_Pump(s,
@@ -96,3 +96,6 @@ class test_Controller_ph_Pump(TestCase):
         finally:
             os.remove(tmp_file_sensor_ph[1])
             os.remove(tmp_file_controller[1])
+            pump_up.cleanup()
+            pump_down.cleanup()
+
