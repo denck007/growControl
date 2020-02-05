@@ -21,7 +21,7 @@ class test_Controllable_Pump(TestCase):
     def test_Controllable_Pump(self):
         '''
         '''
-        cp = Controllable_Pump(gpio_address=None)
+        cp = Controllable_Pump(gpio_pin=None)
 
         dts = [0.1,0.15,0.2]
         for dt in dts:
@@ -29,3 +29,26 @@ class test_Controllable_Pump(TestCase):
             cp(dt)
             end_time = time.time()
             self.assertFloatsClose(start_time+dt,end_time,eps=dt/100.) # get within 1% 
+
+    def test_controllable_pump_real_output(self):
+        '''
+        Verifies:
+            * Recorded time is correct
+        '''
+        if os.uname().machine != "armv6l":
+            print("test_controllable_pump_real_output only works on the raspberrypi!")
+            return
+
+        try:
+            cp = Controllable_Pump(gpio_pin=12)    
+
+            dts = [0.5,0.75,1.0]
+            for dt in dts:
+                print("dt: {}".format(dt))
+                start_time = time.time()
+                cp(dt)
+                end_time = time.time()
+                self.assertFloatsClose(start_time+dt,end_time,eps=dt/100.) # get within 1% 
+                time.sleep(.05)
+        finally:
+            cp.cleanup()
