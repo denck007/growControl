@@ -3,6 +3,7 @@ import datetime
 import os
 import sys
 import time
+import json
 
 try:
     import board
@@ -21,7 +22,7 @@ class Sensor_ph:
     '''
     
 
-    def __init__(self,output_file,average_factor=0.9,read_every=30.,csv=None,verbose=False):
+    def __init__(self,output_file,average_factor=0.9,read_every=30.,csv=None,calibration_file=None,verbose=False):
         '''
         Create the instance of the ph sensor
          
@@ -31,7 +32,7 @@ class Sensor_ph:
         '''
         self.verbose = verbose
 
-        self.output_file = output_file#"/home/neil/growControl/output_files/ph_sensor.csv"
+        self.output_file = output_file
         os.makedirs(os.path.dirname(self.output_file),exist_ok=True)
         with open(self.output_file,'a') as fp:
             fp.write("time,datetime,datetime_timezone,voltage_raw,voltage_avg,ph_raw,ph_avg\n")        
@@ -60,7 +61,7 @@ class Sensor_ph:
         self.voltage_avg = 0. # the average voltage value, initalize to 0.0 volts which is 7.0 ph
         self.ph_avg = 7.0 # the averaged ph value, set to neutral ph
 
-        self._set_calibration_params()
+        self._load_calibration_params(calibration_file)
 
     def _initialize_csv(self,csv):
         '''
@@ -118,18 +119,96 @@ class Sensor_ph:
             value = None
         return value
 
-    def _set_calibration_params(self):
+    def _load_calibration_params(self,calibration_file=None):
         '''
         Set the calibration parameters from a file
+        If the file does not exist prompt to calibrate
         '''
-        self.calibration_value_m = 1/0.057 # volts per ph unit
-        self.calibration_value_b = 7. # volts of bias in ph unit
+        if calibration_file is None:
+            # no calibration data was was given, so try and find the file in the output directory
+            calibration_path = os.path.dirname(os.path.abspath(self.output_file))
+
+            calibration_files = [fname for fname in os.listdir(calibration_path) if "sensor_ph_calibration_" in fname]
+            if len(calibration_files) == 0:
+                print("No calibration data found, please calibrate now")
+                self.calibrate()
+                self._load_calibration_params()
+                return
+            calibration_file = sorted(calibration_files)[-1]
+            calibration_file = os.path.join(calibration_path,calibration_file)
+
+        print("Loading calibration data from {}".format(calibration_file))
+        with open(calibration_file,'r') as fp:
+            data = json.load(fp)
+        
+        if (data["m"] is None) or (data["b"] is None):
+            self.calibrate()
+            self._load_calibration_params()
+        self.calibration_value_m = float(data["m"])
+        self.calibration_value_b = float(data["b"])
+
+        #self.calibration_value_m = -1/0.057 # volts per ph unit
+        #self.calibration_value_b = 7. # volts of bias in ph unit
 
     def convert_voltage_to_ph(self,voltage):
         '''
         Using the calibration values convert the voltage to a ph value
         '''
         return self.calibration_value_m * voltage + self.calibration_value_b
+
+    def calibrate(self):
+        '''
+        Perform a calibration routine on the sensor
+        Will ask user to place in a 4 ph solution, then a 7ph solution
+        It will record:
+            * Raw and calculated values to a file called 'sensor_ph_calibration_<timestamp>'
+        '''
+        calibration_time = 15 # seconds
+        calibration_sps = 5 # number of samples per second while doing calibration
+        calibration_pause = 1.0/calibration_sps #  seconds to wait between samples
+
+        data = {"4ph_raw":[],
+                "7ph_raw":[],
+                "4ph_mean":None,
+                "7ph_mean":None,
+                "m":None,
+                "b":None}
+
+        # Read 4ph solution
+        input("Place probe in 4ph solution and press <Enter>...")
+        end_time = time.time() + calibration_time
+        counter = 0
+        print('Reading...',end="")
+        while time.time() < end_time:
+            counter += 1
+            if counter == (calibration_sps//3):
+                print(".",end="")
+            data["4ph_raw"].append(self._read())
+            time.sleep(calibration_pause)
+        print("\nFinished reading 4ph solution.")
+        
+        # Read 7ph solution
+        input("Place probe in 7ph solution and press <Enter>...")
+        end_time = time.time() + calibration_time
+        counter = 0
+        print('Reading...',end="")
+        while time.time() < end_time:
+            counter += 1
+            if counter == (calibration_sps//3):
+                print(".",end="")
+            data["7ph_raw"].append(self._read())
+            time.sleep(calibration_pause)
+        print("\nFinished reading 7ph solution.")
+        
+        data["4ph_mean"] = sum(data["4ph_raw"])/len(data["4ph_raw"])
+        data["7ph_mean"] = sum(data["7ph_raw"])/len(data["7ph_raw"])
+
+        data["m"] = (4.01-7.04)/(data["4ph_mean"]-data["7ph_mean"])
+        data["b"]  = 7.04 - data["m"] *data["7ph_mean"]
+
+        calibration_path = os.path.dirname(os.path.abspath(self.output_file))
+        with open(os.path.join(calibration_path,'sensor_ph_calibration_raw_'+datetime.datetime.now().isoformat()+".json"),'w') as fp:
+            json.dump(data,fp,indent=2)
 
     def __call__(self):
         '''
@@ -170,12 +249,14 @@ if __name__ == "__main__":
     s_csv = Sensor_ph(output_file="tmp_output_files/ph_{:.0f}.csv".format(time.time()),
                     read_every=1.0,
                     csv="test/test_inputs/sensor_ph_sinewave01_voltage.csv",
+                    calibration_file="test/test_inputs/sensor_ph_calibration_mock.json",
                     verbose=True)
-    s_sensor = Sensor_ph(output_file="tmp_output_files/ph_{:.0f}.csv".format(time.time()),
-                    read_every=1.0,
-                    csv=None,
-                    verbose=True)
+    #s_sensor = Sensor_ph(output_file="tmp_output_files/ph_{:.0f}.csv".format(time.time()),
+    #                read_every=1.0,
+    #                csv=None,
+    #                calibration_file="test/test_inputs/sensor_ph_calibration_mock.json",
+    #                verbose=True)
 
     for ii in range(20):
-        s_sensor()
+        s_csv()
         time.sleep(.5)

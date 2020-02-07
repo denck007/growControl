@@ -34,6 +34,7 @@ class test_Sensor_ph(TestCase):
                             average_factor=0.9,
                             read_every=0.15,
                             csv="test/test_inputs/sensor_ph_input.csv",
+                            calibration_file="test/test_inputs/sensor_ph_calibration_mock.json",
                             verbose=False)
 
             loop_time = 0.1
@@ -88,6 +89,7 @@ class test_Sensor_ph(TestCase):
                             average_factor=0.9,
                             read_every=0.,
                             csv=None,
+                            calibration_file="test/test_inputs/sensor_ph_calibration_mock.json",
                             verbose=False)
 
             start_time = time.time()
