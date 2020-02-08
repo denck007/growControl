@@ -34,7 +34,8 @@ class test_Controller_ph_Pump(TestCase):
                             average_factor=0., # this will make no averaging happen
                             read_every=0.0, # read every chance it gets
                             csv="test/test_inputs/controller_ph_pump_test_ph_input_file.csv",
-                            calibration_file="test/test_inputs/sensor_ph_calibration_mock.json")
+                            calibration_file="test/test_inputs/sensor_ph_calibration_mock.json",
+                            calibrate_on_startup=False)
             pump_up = Controllable_Pump(gpio_pin=None)
             pump_down = Controllable_Pump(gpio_pin=None)
 
