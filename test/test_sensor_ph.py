@@ -35,6 +35,7 @@ class test_Sensor_ph(TestCase):
                             read_every=0.15,
                             csv="test/test_inputs/sensor_ph_input.csv",
                             calibration_file="test/test_inputs/sensor_ph_calibration_mock.json",
+                            calibrate_on_startup=False,
                             verbose=False)
 
             loop_time = 0.1
@@ -90,6 +91,7 @@ class test_Sensor_ph(TestCase):
                             read_every=0.,
                             csv=None,
                             calibration_file="test/test_inputs/sensor_ph_calibration_mock.json",
+                            calibrate_on_startup=False,
                             verbose=False)
 
             start_time = time.time()
@@ -122,10 +124,10 @@ class test_Sensor_ph(TestCase):
                     #If the items cannot be converted to float an error will be thrown
                     ph_raw = float(ph_raw)
                     ph_avg = float(ph_avg)
-                    self.assertTrue(ph_raw > 3.5,msg="Raw ph should be over -0.2v (~3.5ph)")
-                    self.assertTrue(ph_raw < 10.5,msg="Raw ph should be under 0.2v (~10.5ph)")
-                    self.assertTrue(ph_avg > 3.5,msg="Average ph should be over 3.5ph")
-                    self.assertTrue(ph_avg < 10.5,msg="Average ph should be under 10.5ph")
+                    self.assertTrue(ph_raw > 3.5,msg="Raw ph should be over -0.2v (~3.5ph), got {:}".format(ph_raw))
+                    self.assertTrue(ph_raw < 10.5,msg="Raw ph should be under 0.2v (~10.5ph), got {:}".format(ph_raw))
+                    self.assertTrue(ph_avg > 3.5,msg="Average ph should be over 3.5ph, got {:}".format(ph_avg))
+                    self.assertTrue(ph_avg < 10.5,msg="Average ph should be under 10.5ph, got {:}".format(ph_avg))
 
             self.assertFalse(none_counter_voltage >= len(data)-2,msg="Output file must have at least 1 non-'None' value for voltage")
             self.assertFalse(none_counter_ph >= len(data)-2,msg="Output file must have at least 1 non-'None' value for ph")

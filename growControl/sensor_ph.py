@@ -22,7 +22,14 @@ class Sensor_ph:
     '''
     
 
-    def __init__(self,output_file,average_factor=0.9,read_every=30.,csv=None,calibration_file=None,verbose=False):
+    def __init__(self,
+                  output_file, 
+                  average_factor=0.9,
+                  read_every=30.,
+                  csv=None,
+                  calibration_file=None,
+                  calibrate_on_startup=True,
+                  verbose=False):
         '''
         Create the instance of the ph sensor
          
@@ -55,13 +62,16 @@ class Sensor_ph:
             self._initialize_ads1115()
         else: # debugging
             self._initialize_csv(csv)
+        
+        if calibrate_on_startup:
+            self.calibrate()
+        else:
+            self._load_calibration_params(calibration_file)
 
         self.last_reading = time.time() - self.read_every - 1 # make it so imediatly the data is out of date to force reading
 
         self.voltage_avg = 0. # the average voltage value, initalize to 0.0 volts which is 7.0 ph
         self.ph_avg = 7.0 # the averaged ph value, set to neutral ph
-
-        self._load_calibration_params(calibration_file)
 
     def _initialize_csv(self,csv):
         '''
@@ -163,6 +173,10 @@ class Sensor_ph:
         It will record:
             * Raw and calculated values to a file called 'sensor_ph_calibration_<timestamp>'
         '''
+        calibrate = input("Calibrate Sensor? If no, will load most recent calibration data <y/n>\n")
+        if calibrate.lower()[0] != "y":
+            self._load_calibration_params()
+
         calibration_time = 15 # seconds
         calibration_sps = 5 # number of samples per second while doing calibration
         calibration_pause = 1.0/calibration_sps #  seconds to wait between samples
