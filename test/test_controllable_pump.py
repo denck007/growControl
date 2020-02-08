@@ -44,11 +44,10 @@ class test_Controllable_Pump(TestCase):
 
             dts = [0.5,0.75,1.0]
             for dt in dts:
-                print("dt: {}".format(dt))
                 start_time = time.time()
                 cp(dt)
                 end_time = time.time()
-                self.assertFloatsClose(start_time+dt,end_time,eps=dt/100.) # get within 1% 
+                self.assertFloatsClose(start_time+dt,end_time,eps=dt/100.*5) # get within 5% 
                 time.sleep(.05)
         finally:
             cp.cleanup()
