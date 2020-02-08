@@ -156,6 +156,7 @@ class Sensor_ph:
             self._load_calibration_params()
         self.calibration_value_m = float(data["m"])
         self.calibration_value_b = float(data["b"])
+        print("Successfully loaded calibration data!")
 
         #self.calibration_value_m = -1/0.057 # volts per ph unit
         #self.calibration_value_b = 7. # volts of bias in ph unit
@@ -176,6 +177,7 @@ class Sensor_ph:
         calibrate = input("Calibrate Sensor? If no, will load most recent calibration data <y/n>\n")
         if calibrate.lower()[0] != "y":
             self._load_calibration_params()
+            return
 
         calibration_time = 15 # seconds
         calibration_sps = 5 # number of samples per second while doing calibration
