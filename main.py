@@ -34,12 +34,12 @@ if __name__ == "__main__":
     
     sensor_ht = Sensor_humidity_temp(output_file_temp="tmp_output_files/temp_{:.0f}.csv".format(time.time()),
                                 output_file_humidity="tmp_output_files/humidity_{:.0f}.csv".format(time.time()),
-                                read_every=10.0,
+                                read_every=2.0,
                                 average_factor_temp=0.9,
                                 average_factor_humidity=0.9,
                                 #csv="test/test_inputs/sensor_humidity_temp_input.csv",
                                 verbose=verbose)
-    run_time_seconds = 12*60*60
+    run_time_seconds = 30
     end_time = time.time() + run_time_seconds
     while time.time() < end_time:
         sensor_ht()

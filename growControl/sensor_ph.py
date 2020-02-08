@@ -200,7 +200,9 @@ class Sensor_ph:
             data["4ph_raw"].append(self._read())
             time.sleep(calibration_pause)
         print("\nFinished reading 4ph solution.")
-        
+        data["4ph_mean"] = sum(data["4ph_raw"])/len(data["4ph_raw"])
+        print("Average reading for 4ph solution is {:.6f} volts".format(data["4ph_mean"]))
+
         # Read 7ph solution
         input("Place probe in 7ph solution and press <Enter>...")
         end_time = time.time() + calibration_time
@@ -213,16 +215,20 @@ class Sensor_ph:
             data["7ph_raw"].append(self._read())
             time.sleep(calibration_pause)
         print("\nFinished reading 7ph solution.")
-        
-        data["4ph_mean"] = sum(data["4ph_raw"])/len(data["4ph_raw"])
         data["7ph_mean"] = sum(data["7ph_raw"])/len(data["7ph_raw"])
+        print("Average reading for 7ph solution is {:.6f} volts".format(data["7ph_mean"]))
 
-        data["m"] = (4.01-7.04)/(data["4ph_mean"]-data["7ph_mean"])
+        data["m"] = (4.01-7.0)/(data["4ph_mean"]-data["7ph_mean"])
         data["b"]  = 7.04 - data["m"] *data["7ph_mean"]
+        print("Calibration results: ph = {:.6f}*reading + {:.6f}".format(data["m"],data["b"]))
+        print("\t{:.6f} ph/V == {:.6f} v/ph, ideal is 0.05916 mV/ph".format(data["m"],1/data["m"]))
+        print("Ideal sensor params: ph = {:.6f}*reading + {:.6f}".format(-1/.05916,7.0))
 
         calibration_path = os.path.dirname(os.path.abspath(self.output_file))
-        with open(os.path.join(calibration_path,'sensor_ph_calibration_raw_'+datetime.datetime.now().isoformat()+".json"),'w') as fp:
+        calibration_file = os.path.join(calibration_path,'sensor_ph_calibration_raw_'+datetime.datetime.now().isoformat()+".json")
+        with open(calibration_file,'w') as fp:
             json.dump(data,fp,indent=2)
+        self._load_calibration_params(calibration_file=calibration_file)
 
     def __call__(self):
         '''
