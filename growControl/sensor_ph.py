@@ -261,10 +261,11 @@ class Sensor_ph:
             fp.write(output)
 
         if self.verbose:
+            t = datetime.datetime.strftime(datetime.datetime.now(),"%m/%d %H:%M:%S")
             if type(ph) is float:
-                print("{:.4f}: ph {:.2f}".format(time.time(),ph))
+                print("{}       ph: Current: {:.2f} Average: {:.2f}".format(t,ph,self.ph_avg))
             else:
-                print("{:.4f}: ph {}".format(time.time(),ph))
+                print("{}       ph: Current: {} Average: {:.2f}".format(t,ph,self.ph_avg))
         return ph
 
 if __name__ == "__main__":

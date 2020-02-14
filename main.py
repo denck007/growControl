@@ -13,7 +13,7 @@ if __name__ == "__main__":
 
     ph_min = 5.9
     ph_max = 6.1
-    verbose = False
+    verbose = True
     sensor_ph = Sensor_ph(output_file="tmp_output_files/ph_{:.0f}.csv".format(time.time()),
                     read_every=10.0,
                     #csv="test/test_inputs/sensor_ph_sinewave01_voltage.csv",
@@ -26,7 +26,7 @@ if __name__ == "__main__":
                                     pump_up,
                                     pump_down,
                                     output_file="tmp_output_files/Controller_ph_Pump_{:.0f}.csv".format(time.time()),
-                                    ml_per_s=5.0, # ml/sec
+                                    ml_per_s=1.75, # ml/sec, measured 3.5ml in 2 seconds on 20200213
                                     dispense_volume=1.0, # ml
                                     control_every=10*60,
                                     warmup_time=5.*60,
@@ -34,7 +34,7 @@ if __name__ == "__main__":
     
     sensor_ht = Sensor_humidity_temp(output_file_temp="tmp_output_files/temp_{:.0f}.csv".format(time.time()),
                                 output_file_humidity="tmp_output_files/humidity_{:.0f}.csv".format(time.time()),
-                                read_every=2.0,
+                                read_every=5.0,
                                 average_factor_temp=0.9,
                                 average_factor_humidity=0.9,
                                 #csv="test/test_inputs/sensor_humidity_temp_input.csv",

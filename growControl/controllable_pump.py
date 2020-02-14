@@ -57,16 +57,12 @@ class Controllable_Pump:
         '''
         Turn the pump on using the real GPIO
         '''
-        if self.verbose:
-            print("{:.4f} turning pump on".format(time.time()))
         GPIO.output(self.gpio_pin,self._turn_pump_on_gpio_value)
 
     def _pump_off_real(self):
         '''
         Turn the pump off using the real GPIO
         '''
-        if self.verbose:
-            print("{:.4f} turning pump off".format(time.time()))
         GPIO.output(self.gpio_pin,self._turn_pump_off_gpio_value)
 
     def _initialize_gpio_mock(self):
@@ -81,24 +77,27 @@ class Controllable_Pump:
         '''
         Turn the pump on using the mock interface for testing
         '''
-        if self.verbose:
-            print("{:.4f} turning pump on".format(time.time()))
+        pass
 
     def _pump_off_mock(self):
         '''
         Turn the pump off using the mock interface for testing
         '''
-        if self.verbose:
-            print("{:.4f} turning pump off in _pump_off_mock".format(time.time()))
+        pass
 
     def __call__(self,time_on):
         '''
         Turn the pump on for time_on seconds
         '''
+        if self.verbose:
+            t = datetime.datetime.strftime(datetime.datetime.now(),"%m/%d %H:%M:%S")
+            print("{}: Turning pump on for {:.2f} seconds".format(t,time_on))
         self._pump_on()
         time.sleep(time_on)
         self._pump_off()
-        
+        if self.verbose:
+            t = datetime.datetime.strftime(datetime.datetime.now(),"%m/%d %H:%M:%S")
+            print("{}: Turning pump off".format(t))
 if __name__ == "__main__":
     gpio_pin = 12
     try:

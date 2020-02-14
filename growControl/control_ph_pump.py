@@ -67,10 +67,11 @@ class Controller_ph_Pump:
         ph_up_dispensed_time = 0.
         ph_down_dispensed_volume = 0.
         ph_down_dispensed_time = 0.
-        
+
+        t = datetime.datetime.strftime(datetime.datetime.now(),"%m/%d %H:%M:%S")
         if self.sensor_ph.ph_avg > self.ph_max:
             if self.verbose:
-                print("ph low {:.1f}s since last control".format(current_time-self.last_control))
+                print("{}: ph low {:.1f}s since last control".format(t,current_time-self.last_control))
             self.pump_down(self.dispense_time)
             self.last_control = current_time
 
@@ -78,7 +79,7 @@ class Controller_ph_Pump:
             ph_down_dispensed_time = self.dispense_time
         elif self.sensor_ph.ph_avg < self.ph_min:
             if self.verbose:
-                print("ph high {:.1f}s since last control".format(current_time-self.last_control))
+                print("{}: ph high {:.1f}s since last control".format(t,current_time-self.last_control))
             self.pump_up(self.dispense_time)
             self.last_control = current_time
 
