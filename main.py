@@ -41,7 +41,8 @@ if __name__ == "__main__":
                                 verbose=verbose)
     run_time_seconds = 30
     end_time = time.time() + run_time_seconds
-    while time.time() < end_time:
+    #while time.time() < end_time:
+    while True:
         sensor_ht()
         sensor_ph()
         controller()
