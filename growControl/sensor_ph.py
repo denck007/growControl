@@ -137,7 +137,7 @@ class Sensor_ph:
         if calibration_file is None:
             # no calibration data was was given, so try and find the file in the output directory
             calibration_path = os.path.dirname(os.path.abspath(self.output_file))
-
+            print(calibration_path)
             calibration_files = [fname for fname in os.listdir(calibration_path) if "sensor_ph_calibration_" in fname]
             if len(calibration_files) == 0:
                 print("No calibration data found, please calibrate now")
