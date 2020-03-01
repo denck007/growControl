@@ -8,3 +8,6 @@
 * average_factor was 0.9, changing to 0.99
  * Want to control to a range of +/-0.1 pH, using average_factor of 0.9 gives swings of +/-0.1.
 	Changing to 0.99 will have swings of ~+/-0.02
+
+## ph Plot:
+![pH and Control times](Analysis/ph_data_20200301T140521.png)
