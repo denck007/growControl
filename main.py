@@ -6,15 +6,19 @@ Will read ph, temp, humidity and save values to individual files
 Will control ph using 2 pumps
 '''
 import time
-
+import os
 from growControl import Sensor_ph, Controller_ph_Pump, Sensor_humidity_temp, Controllable_Pump
 
 if __name__ == "__main__":
 
-    ph_min = 5.9
-    ph_max = 6.1
+    ph_min = 6.0
+    ph_max = 6.2
+    average_factor = 0.99
     verbose = True
-    sensor_ph = Sensor_ph(output_file="tmp_output_files/ph_{:.0f}.csv".format(time.time()),
+    output_dir = "/home/pi/growControl_Data"
+    #output_dir = "tmp_output_files"
+    sensor_ph = Sensor_ph(output_file=os.path.join(output_dir,"ph_{:.0f}.csv".format(time.time())),
+                    average_factor=average_factor,
                     read_every=10.0,
                     #csv="test/test_inputs/sensor_ph_sinewave01_voltage.csv",
                     calibrate_on_startup=True,
@@ -25,15 +29,17 @@ if __name__ == "__main__":
     controller = Controller_ph_Pump(sensor_ph,
                                     pump_up,
                                     pump_down,
-                                    output_file="tmp_output_files/Controller_ph_Pump_{:.0f}.csv".format(time.time()),
+                                    ph_min=ph_min,
+                                    ph_max=ph_max,
+                                    output_file=os.path.join(output_dir,"Controller_ph_pump_{:.0f}.csv".format(time.time())),
                                     ml_per_s=1.75, # ml/sec, measured 3.5ml in 2 seconds on 20200213
-                                    dispense_volume=1.0, # ml
+                                    dispense_volume=3, # ml
                                     control_every=10*60,
                                     warmup_time=5.*60,
                                     verbose=verbose)
     
-    sensor_ht = Sensor_humidity_temp(output_file_temp="tmp_output_files/temp_{:.0f}.csv".format(time.time()),
-                                output_file_humidity="tmp_output_files/humidity_{:.0f}.csv".format(time.time()),
+    sensor_ht = Sensor_humidity_temp(output_file_temp=os.path.join(output_dir,"temp_{:.0f}.csv".format(time.time())),
+                                output_file_humidity=os.path.join(output_dir,"humidity_{:.0f}.csv".format(time.time())),
                                 read_every=5.0,
                                 average_factor_temp=0.9,
                                 average_factor_humidity=0.9,
