@@ -149,8 +149,8 @@ class Sensor_humidity_temp:
         
         if self.verbose:
             t = datetime.datetime.strftime(datetime.datetime.now(),"%m/%d %H:%M:%S")
-            print("{} Humidity: Current: {} Average: {}".format(t,humidity,self.humidity))
-            print("{}     Temp: Current: {} Average: {}".format(t,temp,self.temp))
+            print("{} Humidity: Current: {:.1f} Average: {:.1f}".format(t,humidity,self.humidity))
+            print("{}     Temp: Current: {:.1f} Average: {:.1f}".format(t,temp,self.temp))
 
 
 if __name__ == "__main__":
