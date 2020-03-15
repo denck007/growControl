@@ -14,8 +14,9 @@ class Sensor_humidity_temp:
     '''
     Read the temperature and humidity from a DHT11 or DHT22 sensor
     '''
-    def __init__(self,output_file_temp,output_file_humidity,read_every=30.0,average_factor_temp=0.9,average_factor_humidity=0.9,csv=None,verbose=False):
+    def __init__(self,gpio_pin,output_file_temp,output_file_humidity,read_every=30.0,average_factor_temp=0.9,average_factor_humidity=0.9,csv=None,verbose=False):
         '''
+        gpio_pin: The pin to read from
         output_file_temp: Path to the output for the temperature data
         output_file_humidity: Path to the output for the humidity data
 
@@ -38,7 +39,7 @@ class Sensor_humidity_temp:
 
         self.verbose = verbose
         self.sensor_model = "DHT22"
-        self.gpio_pin = 18
+        self.gpio_pin = gpio_pin
         self.retries = 15 # number of times to try and read the sensor
         self.retry_pause = 0.1 # Time to wait between retries
 

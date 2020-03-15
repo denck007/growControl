@@ -38,18 +38,30 @@ if __name__ == "__main__":
                                     warmup_time=5.*60,
                                     verbose=verbose)
     
-    sensor_ht = Sensor_humidity_temp(output_file_temp=os.path.join(output_dir,"temp_{:.0f}.csv".format(time.time())),
-                                output_file_humidity=os.path.join(output_dir,"humidity_{:.0f}.csv".format(time.time())),
+    sensor_ht_ambient = Sensor_humidity_temp(gpio_pin=18,
+                                output_file_temp=os.path.join(output_dir,"temp_ambient_{:.0f}.csv".format(time.time())),
+                                output_file_humidity=os.path.join(output_dir,"humidity_ambient_{:.0f}.csv".format(time.time())),
                                 read_every=5.0,
                                 average_factor_temp=0.9,
                                 average_factor_humidity=0.9,
                                 #csv="test/test_inputs/sensor_humidity_temp_input.csv",
                                 verbose=verbose)
+
+    sensor_ht_grow = Sensor_humidity_temp(gpio_pin=23,
+                                output_file_temp= os.path.join(output_dir,"temp_grow_{:.0f}.csv".format(time.time())),
+                                output_file_humidity=os.path.join(output_dir,"humidity_grow_{:.0f}.csv".format(time.time())),
+                                read_every=5.0,
+                                average_factor_temp=0.9,
+                                average_factor_humidity=0.9,
+                                verbose=verbose)
+
     run_time_seconds = 30
     end_time = time.time() + run_time_seconds
     #while time.time() < end_time:
     while True:
-        sensor_ht()
+        print()
+        sensor_ht_ambient()
+        sensor_ht_grow()
         sensor_ph()
         controller()
         time.sleep(1)
