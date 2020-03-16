@@ -98,7 +98,7 @@ class Sensor_humidity_temp:
             self._sensor = Adafruit_DHT.AM2302
         else:
             raise ValueError("Invalid sensor_model {}. Expected DHT11, DHT22, or AM2302".format(self.sensor_model))
-            
+
         self._read = self._read_sensor
 
     def _read_sensor(self):
@@ -124,7 +124,7 @@ class Sensor_humidity_temp:
         '''
         Reads the sensor
         '''
-        
+
         current_time = time.time()
         # check to the see if the oldest reading is out of date
         if current_time - self.read_every < min(self.last_reading_temp,self.last_reading_humidity):
@@ -147,15 +147,20 @@ class Sensor_humidity_temp:
         output += "{},{}\n".format(temp,self.temp)
         with open(self.output_file_temp,'a') as fp:
             fp.write(output)
-        
+
         if self.verbose:
             t = datetime.datetime.strftime(datetime.datetime.now(),"%m/%d %H:%M:%S")
-            print("{} Humidity: Current: {:.1f} Average: {:.1f}".format(t,humidity,self.humidity))
-            print("{}     Temp: Current: {:.1f} Average: {:.1f}".format(t,temp,self.temp))
-
+            if humidity is None:
+                print("{} Humidity: Current: ---- Average: {:.1f}".format(t,self.humidity))
+            else:
+                print("{} Humidity: Current: {:.1f} Average: {:.1f}".format(t,humidity,self.humidity))
+            if temp is None:
+                print("{}     Temp: Current: ---- Average: {:.1f}".format(t,self.temp))
+            else:
+                print("{}     Temp: Current: {:.1f} Average: {:.1f}".format(t,temp,self.temp))
 
 if __name__ == "__main__":
-    
+
     th_csv = Sensor_humidity_temp(output_file_temp="tmp_output_files/temp_{:.0f}.csv".format(time.time()),
                                 output_file_humidity="tmp_output_files/humidity_{:.0f}.csv".format(time.time()),
                                 read_every=1.0,
