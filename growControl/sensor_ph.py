@@ -23,7 +23,8 @@ class Sensor_ph:
     
 
     def __init__(self,
-                  output_file, 
+                  output_file_path,
+                  output_file_base, 
                   average_factor=0.9,
                   read_every=30.,
                   csv=None,
@@ -32,17 +33,26 @@ class Sensor_ph:
                   verbose=False):
         '''
         Create the instance of the ph sensor
-         
-        If use_csv is not None then it must be a valid file path. This is only for debugging
-            the csv file is a file with rows of a single float which is a voltage corresponding to a ph value
-                it should be the same as what data_stream.voltage would return
+        
+        output_file_path: path to where the output data should be saved
+        output_file_base: start of the output file name. This will get the date appended to it
+        average_factor: float (0,1), the weighting factor for the exponential moving average calculation
+        read_every: float > 0, Minimum number of seconds between each reading
+        csv: None or path ot csv file to use as a mock input.
+                If csv is not None then it must be a valid file path. This is only for debugging
+                    the csv file is a file with rows of a single float which is a voltage corresponding to a ph value
+                    it should be the same as what data_stream.voltage would return
+        calibration_file: None or path to json file with calibration data. The file must contain keys "m" and "b" with floats corresponding
+                            to the slope and y-intercept of the voltage vs ph plot
+        calibrate_on_startup: Boolean, As for calibration to be done when the object is created
+        verbose: Boolean, Output the data to standard out
         '''
         self.verbose = verbose
 
-        self.output_file = output_file
-        os.makedirs(os.path.dirname(self.output_file),exist_ok=True)
-        with open(self.output_file,'a') as fp:
-            fp.write("time,datetime,datetime_timezone,voltage_raw,voltage_avg,ph_raw,ph_avg\n")        
+        self.output_file_path = output_file_path
+        self.output_file_base = output_file_base
+        os.makedirs(os.path.dirname(self.output_file_path),exist_ok=True)
+        self.update_output_file_path()     
 
         # how much of the previous value to keep result = previous * average_factor + new * (1-average_factor)
         #   A larger value makes it slower to respond but is more noise resistant
@@ -70,8 +80,26 @@ class Sensor_ph:
 
         self.last_reading = time.time() - self.read_every - 1 # make it so imediatly the data is out of date to force reading
 
+        self.voltage_raw = None # initilize the value of the current voltage
         self.voltage_avg = 0. # the average voltage value, initalize to 0.0 volts which is 7.0 ph
+        self.ph_raw = None # initilize the ph value
         self.ph_avg = 7.0 # the averaged ph value, set to neutral ph
+
+    def update_output_file_path(self):
+        '''
+        Updates the property self.output_file
+        Checks to see if the file <self.output_file_path> + <self.output_file_base> + <date in YYYY-MM-DD format> .csv
+            If it does:
+                do nothing
+            If it does not exist:
+                create it and initialize the header
+        '''
+
+        date = datetime.date.today().isoformat()
+        self.output_file = os.path.join(self.output_file_path,"{}_{}.csv".format(self.output_file_base,date))
+        if not os.path.isfile(self.output_file):
+            with open(self.output_file,'a') as fp:
+                fp.write("time,datetime_timezone,voltage_raw,voltage_avg,ph_raw,ph_avg\n")
 
     def _initialize_csv(self,csv):
         '''
@@ -240,7 +268,9 @@ class Sensor_ph:
         if current_time - self.read_every < self.last_reading:
             # not enough time has passed since last reading, just return
             return
-    
+
+        self.update_output_file_path() # Starts a new output file every day
+
         self.voltage_raw = self._read()
         if self.voltage_raw is None:
             self.ph_raw = None
@@ -254,8 +284,8 @@ class Sensor_ph:
             self.voltage_avg = self.voltage_avg * self.average_factor + self.voltage_raw * (1-self.average_factor)
             self.ph_avg = self.ph_avg * self.average_factor + self.ph_raw * (1-self.average_factor)
 
-        #fp.write("time,datetime,datetime_timezone,voltage_raw,voltage_avg,ph_raw,ph_avg\n")
-        output = "{},{},{},".format(time.time(),datetime.datetime.now(),datetime.datetime.now().astimezone())
+        #fp.write("time,datetime_timezone,voltage_raw,voltage_avg,ph_raw,ph_avg\n")
+        output = "{},{},".format(time.time(),datetime.datetime.now().astimezone())
         output += "{},{},{},{}\n".format(self.voltage_raw,self.voltage_avg,self.ph_raw,self.ph_avg)
         with open(self.output_file,'a') as fp:
             fp.write(output)
