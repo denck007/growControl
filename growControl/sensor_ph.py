@@ -241,32 +241,31 @@ class Sensor_ph:
             # not enough time has passed since last reading, just return
             return
     
-        voltage = self._read()
-        if voltage is None:
-            ph = None
+        self.voltage_raw = self._read()
+        if self.voltage_raw is None:
+            self.ph_raw = None
         else:
-            ph = self.convert_voltage_to_ph(voltage)
+            self.ph_raw = self.convert_voltage_to_ph(self.voltage_raw)
             self.last_reading = current_time # Only change if a valid voltage is read
         
         # If there was an error reading voltage is none. 
         #   In this case we do not want to update the moving average
-        if voltage is not None: 
-            self.voltage_avg = self.voltage_avg * self.average_factor + voltage * (1-self.average_factor)
-            self.ph_avg = self.ph_avg * self.average_factor + ph * (1-self.average_factor)
+        if self.voltage_raw is not None: 
+            self.voltage_avg = self.voltage_avg * self.average_factor + self.voltage_raw * (1-self.average_factor)
+            self.ph_avg = self.ph_avg * self.average_factor + self.ph_raw * (1-self.average_factor)
 
         #fp.write("time,datetime,datetime_timezone,voltage_raw,voltage_avg,ph_raw,ph_avg\n")
         output = "{},{},{},".format(time.time(),datetime.datetime.now(),datetime.datetime.now().astimezone())
-        output += "{},{},{},{}\n".format(voltage,self.voltage_avg,ph,self.ph_avg)
+        output += "{},{},{},{}\n".format(self.voltage_raw,self.voltage_avg,self.ph_raw,self.ph_avg)
         with open(self.output_file,'a') as fp:
             fp.write(output)
 
         if self.verbose:
             t = datetime.datetime.strftime(datetime.datetime.now(),"%m/%d %H:%M:%S")
-            if type(ph) is float:
-                print("{}       ph: Current: {:.2f} Average: {:.2f}".format(t,ph,self.ph_avg))
+            if type(self.ph_raw) is float:
+                print("{}       ph: Current: {:.2f} Average: {:.2f}".format(t,self.ph_raw,self.ph_avg))
             else:
-                print("{}       ph: Current: {} Average: {:.2f}".format(t,ph,self.ph_avg))
-        return ph
+                print("{}       ph: Current: {} Average: {:.2f}".format(t,self.ph_raw,self.ph_avg))
 
 if __name__ == "__main__":
     s_csv = Sensor_ph(output_file="tmp_output_files/ph_{:.0f}.csv".format(time.time()),
