@@ -30,6 +30,7 @@ class test_Sensor_humidity_temp(TestCase):
             tmp_file_temp = tempfile.mkstemp(suffix=".csv")
             tmp_file_humidity = tempfile.mkstemp(suffix=".csv")
             th = Sensor_humidity_temp(output_file_temp=tmp_file_temp[1],
+                                        gpio_pin=None,
                                         output_file_humidity=tmp_file_humidity[1],
                                         read_every=.15, # between loop_time and 2*loop_time
                                         average_factor_temp=0.9,
@@ -90,6 +91,7 @@ class test_Sensor_humidity_temp(TestCase):
             tmp_file_temp = tempfile.mkstemp(suffix=".csv")
             tmp_file_humidity = tempfile.mkstemp(suffix=".csv")
             th = Sensor_humidity_temp(output_file_temp=tmp_file_temp[1],
+                                        gpio_pin=0,
                                         output_file_humidity=tmp_file_humidity[1],
                                         read_every=.15,
                                         average_factor_temp=0.9,
