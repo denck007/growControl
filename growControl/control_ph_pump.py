@@ -74,7 +74,6 @@ class Controller_ph_Pump:
                 print("{}: ph low {:.1f}s since last control".format(t,current_time-self.last_control))
             self.pump_down(self.dispense_time)
             self.last_control = current_time
-
             ph_down_dispensed_volume = self.dispense_volume
             ph_down_dispensed_time = self.dispense_time
         elif self.sensor_ph.ph_avg < self.ph_min:
@@ -82,15 +81,20 @@ class Controller_ph_Pump:
                 print("{}: ph high {:.1f}s since last control".format(t,current_time-self.last_control))
             self.pump_up(self.dispense_time)
             self.last_control = current_time
-
             ph_up_dispensed_volume = self.dispense_volume
             ph_up_dispensed_time = self.dispense_time
-                
-        #fp.write("time,datetime,datetime_timezone, ph_down_time,ph_down_volume, ph_up_time,ph_up_volume\n")        
-        output = "{},{},{},".format(current_time,datetime.datetime.now(),datetime.datetime.now().astimezone())
-        output += "{},{},{},{}\n".format(ph_down_dispensed_time,ph_down_dispensed_volume,ph_up_dispensed_time,ph_up_dispensed_volume)
-        with open(self.output_file,'a') as fp:
-            fp.write(output)
+        else:
+            # Want to only TRY and control every control_every. Updating the time will prevent the next
+            #   iteration from trying to run the control again.
+            self.last_control = current_time
+        
+        if (ph_up_dispensed_time != 0.) or (ph_down_dispensed_time != 0):
+            # Only record when an action was taken
+            #fp.write("time,datetime,datetime_timezone, ph_down_time,ph_down_volume, ph_up_time,ph_up_volume\n")        
+            output = "{},{},{},".format(current_time,datetime.datetime.now(),datetime.datetime.now().astimezone())
+            output += "{},{},{},{}\n".format(ph_down_dispensed_time,ph_down_dispensed_volume,ph_up_dispensed_time,ph_up_dispensed_volume)
+            with open(self.output_file,'a') as fp:
+                fp.write(output)
 
 if __name__ == "__main__":
     from control_ph_pump import Controller_ph_Pump
@@ -98,11 +102,13 @@ if __name__ == "__main__":
     from controllable_pump import Controllable_Pump
     
     sensor_ph = Sensor_ph(output_file="tmp_output_files/ph_{:.0f}".format(time.time()),
+                            calibration_file="test/test_inputs/sensor_ph_calibration_mock.json",
+                            calibrate_on_startup=False,
                             read_every=1.0,
                             csv="test/test_inputs/sensor_ph_sinewave01_voltage.csv",
                             verbose=True)
-    pump_up = Controllable_Pump(0,verbose=True)
-    pump_down = Controllable_Pump(0,verbose=True)
+    pump_up = Controllable_Pump(None,verbose=True)
+    pump_down = Controllable_Pump(None,verbose=True)
     controller = Controller_ph_Pump(sensor_ph,
                                     pump_up,
                                     pump_down,
