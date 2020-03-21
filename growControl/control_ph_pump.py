@@ -50,18 +50,26 @@ class Controller_ph_Pump:
             fp.write("time,datetime,datetime_timezone,ph_down_time,ph_down_volume,ph_up_time,ph_up_volume\n")        
 
 
-        # Because the test for control is current_time - control_every  < last_control,
+        # Because the test for control is current_time - control_every  < last_loop_time,
         #   Need to subtract control_every here, otherwise it will wait warmup_time + control_every
         #   before it starts to control
-        self.last_control = time.time() + self.warmup_time - self.control_every
+        # last_loop is the last time the controller checked for an action
+        # last_action is the last time the controller took an action
+        self.last_loop_time = time.time() + self.warmup_time - self.control_every
+        self.last_action_time = self.last_loop_time 
+        self.last_action = "None"
 
     def __call__(self):
         '''
         Execute a control command based on the current sensor_ph value, and time since last control
         ''' 
         current_time = time.time()
-        if current_time - self.control_every < self.last_control:
+        if current_time - self.control_every < self.last_loop_time:
             return 
+        
+        # Want to only TRY and control every control_every. Updating the time will prevent the next
+            #   iteration from trying to run the control again.
+        self.last_loop_time = current_time
 
         ph_up_dispensed_volume = 0.
         ph_up_dispensed_time = 0.
@@ -71,22 +79,20 @@ class Controller_ph_Pump:
         t = datetime.datetime.strftime(datetime.datetime.now(),"%m/%d %H:%M:%S")
         if self.sensor_ph.ph_avg > self.ph_max:
             if self.verbose:
-                print("{}: ph low {:.1f}s since last control".format(t,current_time-self.last_control))
+                print("{}: ph low {:.1f}s since last control".format(t,current_time-self.last_loop_time))
             self.pump_down(self.dispense_time)
-            self.last_control = current_time
+            self.last_action_time = current_time
+            self.last_action = "Adjust ph Down"
             ph_down_dispensed_volume = self.dispense_volume
             ph_down_dispensed_time = self.dispense_time
         elif self.sensor_ph.ph_avg < self.ph_min:
             if self.verbose:
-                print("{}: ph high {:.1f}s since last control".format(t,current_time-self.last_control))
+                print("{}: ph high {:.1f}s since last control".format(t,current_time-self.last_loop_time))
             self.pump_up(self.dispense_time)
-            self.last_control = current_time
+            self.last_action_time = current_time
+            self.last_action = "Adjust ph Up"
             ph_up_dispensed_volume = self.dispense_volume
             ph_up_dispensed_time = self.dispense_time
-        else:
-            # Want to only TRY and control every control_every. Updating the time will prevent the next
-            #   iteration from trying to run the control again.
-            self.last_control = current_time
         
         if (ph_up_dispensed_time != 0.) or (ph_down_dispensed_time != 0):
             # Only record when an action was taken
