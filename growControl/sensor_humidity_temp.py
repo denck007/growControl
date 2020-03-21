@@ -55,8 +55,10 @@ class Sensor_humidity_temp:
         else: # debugging
             self._initialize_csv(csv)
 
-        self.temp = 20 # initialize to 20 degrees C
-        self.humidity = 50 # initialize to 50% relative humidity
+        self.temp_raw = None
+        self.humidiy_raw = None
+        self.temp_avg = 20. # initialize to 20 degrees C
+        self.humidity_avg = 50. # initialize to 50% relative humidity
 
         self.last_reading_temp = time.time() - self.read_every - 1 # make it so imediatly the data is out of date to force reading
         self.last_reading_humidity = time.time() - self.read_every - 1 # make it so imediatly the data is out of date to force reading
@@ -130,53 +132,54 @@ class Sensor_humidity_temp:
         if current_time - self.read_every < min(self.last_reading_temp,self.last_reading_humidity):
             return
 
-        humidity,temp = self._read()
+        self.humidity_raw,self.temp_raw = self._read()
 
-        if humidity is not None:
-            self.humidity = self.humidity * self.average_factor_humidity + humidity * (1-self.average_factor_humidity)
+        if self.humidity_raw is not None:
+            self.humidity_avg = self.humidity_avg * self.average_factor_humidity + self.humidity_raw * (1-self.average_factor_humidity)
             self.last_reading_humidity = current_time
-        if temp is not None:
-            self.temp = self.temp * self.average_factor_temp + temp * (1-self.average_factor_temp)
+        if self.temp_raw is not None:
+            self.temp_avg = self.temp_avg * self.average_factor_temp + self.temp_raw * (1-self.average_factor_temp)
             self.last_reading_temp = current_time
 
         output = "{},{},{},".format(time.time(),datetime.datetime.now(),datetime.datetime.now().astimezone())
-        output += "{},{}\n".format(humidity,self.humidity)
+        output += "{},{}\n".format(self.humidity_raw,self.humidity_avg)
         with open(self.output_file_humidity,'a') as fp:
             fp.write(output)
         output = "{},{},{},".format(time.time(),datetime.datetime.now(),datetime.datetime.now().astimezone())
-        output += "{},{}\n".format(temp,self.temp)
+        output += "{},{}\n".format(self.temp_raw,self.temp_avg)
         with open(self.output_file_temp,'a') as fp:
             fp.write(output)
 
         if self.verbose:
             t = datetime.datetime.strftime(datetime.datetime.now(),"%m/%d %H:%M:%S")
-            if humidity is None:
-                print("{} Humidity: Current: ---- Average: {:.1f}".format(t,self.humidity))
+            if self.humidity_raw is None:
+                print("{} Humidity: Current: ---- Average: {:.1f}".format(t,self.humidity_avg))
             else:
-                print("{} Humidity: Current: {:.1f} Average: {:.1f}".format(t,humidity,self.humidity))
-            if temp is None:
-                print("{}     Temp: Current: ---- Average: {:.1f}".format(t,self.temp))
+                print("{} Humidity: Current: {:.1f} Average: {:.1f}".format(t,self.humidity_raw,self.humidity_avg))
+            if self.temp_raw is None:
+                print("{}     Temp: Current: ---- Average: {:.1f}".format(t,self.temp_avg))
             else:
-                print("{}     Temp: Current: {:.1f} Average: {:.1f}".format(t,temp,self.temp))
+                print("{}     Temp: Current: {:.1f} Average: {:.1f}".format(t,self.temp_raw,self.temp_avg))
 
 if __name__ == "__main__":
 
     th_csv = Sensor_humidity_temp(output_file_temp="tmp_output_files/temp_{:.0f}.csv".format(time.time()),
                                 output_file_humidity="tmp_output_files/humidity_{:.0f}.csv".format(time.time()),
+                                gpio_pin=None,
                                 read_every=1.0,
                                 average_factor_temp=0.9,
                                 average_factor_humidity=0.8,
                                 csv="test/test_inputs/sensor_humidity_temp_input.csv",
                                 verbose=True)
-    th_sensor = Sensor_humidity_temp(output_file_temp="tmp_output_files/temp_{:.0f}.csv".format(time.time()),
-                                output_file_humidity="tmp_output_files/humidity_{:.0f}.csv".format(time.time()),
-                                read_every=2.0,
-                                average_factor_temp=0.9,
-                                average_factor_humidity=0.8,
-                                csv=None,
-                                verbose=True)
+    #th_sensor = Sensor_humidity_temp(output_file_temp="tmp_output_files/temp_{:.0f}.csv".format(time.time()),
+    #                            output_file_humidity="tmp_output_files/humidity_{:.0f}.csv".format(time.time()),
+    #                            read_every=2.0,
+    #                            average_factor_temp=0.9,
+    #                            average_factor_humidity=0.8,
+    #                            csv=None,
+    #                            verbose=True)
 
     for ii in range(10):
         print()
-        th_sensor()
+        th_csv()
         time.sleep(.5)
