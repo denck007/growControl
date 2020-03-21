@@ -8,7 +8,19 @@ class Controller_ph_Pump:
     Uses to pumps to control the ph of a system
     '''
 
-    def __init__(self,sensor_ph, pump_ph_up, pump_ph_down, output_file, ml_per_s=1.0, dispense_volume=3.0, ph_min=5.8, ph_max=6.2, control_every=30*60, warmup_time=10*60, verbose=False):
+    def __init__(self,
+                sensor_ph,
+                pump_ph_up,
+                pump_ph_down,
+                output_file_path,
+                output_file_base,
+                ml_per_s=1.0,
+                dispense_volume=3.0,
+                ph_min=5.8,
+                ph_max=6.2,
+                control_every=30*60,
+                warmup_time=10*60,
+                verbose=False):
         '''
         Turns on ph up and down pumps based on the current ph of sensor_ph
         
@@ -34,7 +46,12 @@ class Controller_ph_Pump:
 
         self.ml_per_s = ml_per_s
         self.dispense_volume = dispense_volume
-        self.output_file = output_file
+        
+        self.output_file_path = output_file_path
+        self.output_file_base = output_file_base
+        os.makedirs(os.path.dirname(self.output_file_path),exist_ok=True)
+        self.update_output_file_path()     
+
 
         self.ph_min = ph_min
         self.ph_max = ph_max
@@ -43,12 +60,6 @@ class Controller_ph_Pump:
         self.verbose = verbose
 
         self.dispense_time = self.dispense_volume / self.ml_per_s
-
-        # write the headers to the output file
-        os.makedirs(os.path.dirname(self.output_file),exist_ok=True)
-        with open(self.output_file,'a') as fp:
-            fp.write("time,datetime,datetime_timezone,ph_down_time,ph_down_volume,ph_up_time,ph_up_volume\n")        
-
 
         # Because the test for control is current_time - control_every  < last_loop_time,
         #   Need to subtract control_every here, otherwise it will wait warmup_time + control_every
@@ -59,6 +70,22 @@ class Controller_ph_Pump:
         self.last_action_time = self.last_loop_time 
         self.last_action = "None"
 
+    def update_output_file_path(self):
+        '''
+        Updates the property self.output_file
+        Checks to see if the file <self.output_file_path> + <self.output_file_base> + <date in YYYY-MM-DD format> .csv
+            If it does:
+                do nothing
+            If it does not exist:
+                create it and initialize the header
+        '''
+
+        date = datetime.date.today().isoformat()
+        self.output_file = os.path.join(self.output_file_path,"{}_{}.csv".format(self.output_file_base,date))
+        if not os.path.isfile(self.output_file):
+            with open(self.output_file,'a') as fp:
+                fp.write("time,datetime_timezone,ph_down_time,ph_down_volume,ph_up_time,ph_up_volume\n")        
+
     def __call__(self):
         '''
         Execute a control command based on the current sensor_ph value, and time since last control
@@ -66,6 +93,8 @@ class Controller_ph_Pump:
         current_time = time.time()
         if current_time - self.control_every < self.last_loop_time:
             return 
+
+        self.update_output_file_path() # Starts a new output file every day
         
         # Want to only TRY and control every control_every. Updating the time will prevent the next
             #   iteration from trying to run the control again.
@@ -97,7 +126,7 @@ class Controller_ph_Pump:
         if (ph_up_dispensed_time != 0.) or (ph_down_dispensed_time != 0):
             # Only record when an action was taken
             #fp.write("time,datetime,datetime_timezone, ph_down_time,ph_down_volume, ph_up_time,ph_up_volume\n")        
-            output = "{},{},{},".format(current_time,datetime.datetime.now(),datetime.datetime.now().astimezone())
+            output = "{},{},".format(current_time,datetime.datetime.now().astimezone())
             output += "{},{},{},{}\n".format(ph_down_dispensed_time,ph_down_dispensed_volume,ph_up_dispensed_time,ph_up_dispensed_volume)
             with open(self.output_file,'a') as fp:
                 fp.write(output)
@@ -107,7 +136,8 @@ if __name__ == "__main__":
     from sensor_ph import Sensor_ph
     from controllable_pump import Controllable_Pump
     
-    sensor_ph = Sensor_ph(output_file="tmp_output_files/ph_{:.0f}".format(time.time()),
+    sensor_ph = Sensor_ph(output_file_path="tmp_output_files/",
+                            output_file_base="sensor_ph",
                             calibration_file="test/test_inputs/sensor_ph_calibration_mock.json",
                             calibrate_on_startup=False,
                             read_every=1.0,
@@ -118,7 +148,8 @@ if __name__ == "__main__":
     controller = Controller_ph_Pump(sensor_ph,
                                     pump_up,
                                     pump_down,
-                                    output_file="tmp_output_files/Controller_ph_Pump_{:.0f}.csv".format(time.time()),
+                                    output_file_path="tmp_output_files/",
+                                    output_file_base="controller_ph_pump",
                                     ml_per_s=5.0, # ml/sec
                                     dispense_volume=1.0, # ml
                                     control_every=2,
