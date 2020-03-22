@@ -209,7 +209,6 @@ class Sensor_ph:
 
         calibration_time = 15 # seconds
         calibration_sps = 5 # number of samples per second while doing calibration
-        calibration_pause = 1.0/calibration_sps #  seconds to wait between samples
 
         data = {"4ph_raw":[],
                 "7ph_raw":[],
@@ -220,45 +219,60 @@ class Sensor_ph:
 
         # Read 4ph solution
         input("Place probe in 4ph solution and press <Enter>...")
-        end_time = time.time() + calibration_time
-        counter = 0
-        print('Reading...',end="")
-        while time.time() < end_time:
-            counter += 1
-            if counter == (calibration_sps//3):
-                print(".",end="")
-            data["4ph_raw"].append(self._read())
-            time.sleep(calibration_pause)
-        print("\nFinished reading 4ph solution.")
-        data["4ph_mean"] = sum(data["4ph_raw"])/len(data["4ph_raw"])
-        print("Average reading for 4ph solution is {:.6f} volts".format(data["4ph_mean"]))
+        data.update(self._calibration_get_point_data("4ph",duration=calibration_time,sps=calibration_sps))
 
-        # Read 7ph solution
         input("Place probe in 7ph solution and press <Enter>...")
-        end_time = time.time() + calibration_time
-        counter = 0
-        print('Reading...',end="")
-        while time.time() < end_time:
-            counter += 1
-            if counter == (calibration_sps//3):
-                print(".",end="")
-            data["7ph_raw"].append(self._read())
-            time.sleep(calibration_pause)
-        print("\nFinished reading 7ph solution.")
-        data["7ph_mean"] = sum(data["7ph_raw"])/len(data["7ph_raw"])
-        print("Average reading for 7ph solution is {:.6f} volts".format(data["7ph_mean"]))
+        data.update(self._calibration_get_point_data("7ph",duration=calibration_time,sps=calibration_sps))
 
-        data["m"] = (4.01-7.0)/(data["4ph_mean"]-data["7ph_mean"])
-        data["b"]  = 7.04 - data["m"] *data["7ph_mean"]
+        data.update(self._calibration_compute_line(data))
+        
+        print("Average reading for 4ph solution is {:.6f} volts".format(data["4ph_mean"]))
+        print("Average reading for 7ph solution is {:.6f} volts".format(data["7ph_mean"]))
         print("Calibration results: ph = {:.6f}*reading + {:.6f}".format(data["m"],data["b"]))
         print("\t{:.6f} ph/V == {:.6f} v/ph, ideal is 0.05916 mV/ph".format(data["m"],1/data["m"]))
         print("Ideal sensor params: ph = {:.6f}*reading + {:.6f}".format(-1/.05916,7.0))
 
-        calibration_path = os.path.dirname(os.path.abspath(self.output_file))
-        calibration_file = os.path.join(calibration_path,'sensor_ph_calibration_raw_'+datetime.datetime.now().isoformat()+".json")
-        with open(calibration_file,'w') as fp:
-            json.dump(data,fp,indent=2)
+        calibration_file = self._calibration_save_data(data)
         self._load_calibration_params(calibration_file=calibration_file)
+
+    def _calibration_get_point_data(self,name,duration=15,sps=5):
+        pause_time = 1./float(sps)
+
+        if not (name=="4ph" or name=="7ph"):
+            raise ValueError("in _calibrate_point, name must be either '4ph' or '7ph'")
+        
+        raw_data = []
+        end_time = time.time() + duration
+        while time.time() < end_time:
+            raw_data.append(self._read())
+            time.sleep(pause_time)
+
+        mean = sum(raw_data)/len(raw_data)
+        data = {"{}_raw".format(name):raw_data,
+                "{}_mean".format(name):mean}
+
+        return data        
+
+    def _calibration_compute_line(self,data):
+        '''
+        Given a dict with keys '4ph_mean' and '7ph_mean', compute the y-intercept and slope 
+            to compute ph from the voltate measurement
+        '''
+        if ('4ph_mean' not in data) or ('7ph_mean' not in data):
+            raise ValueError("in _compute_calibration, 'data' must have keys '4ph_mean' and '7ph_mean. Existing keys are: {}".format(list(data.keys())))
+
+        data["m"] = (4.01-7.0)/(data["4ph_mean"]-data["7ph_mean"])
+        data["b"]  = 7.04 - data["m"] *data["7ph_mean"]
+        return data
+
+    def _calibration_save_data(self,data):
+        '''
+        Save the calibration data to disk
+        '''
+        calibration_filename = os.path.join(self.output_file_path,'sensor_ph_calibration_raw_'+datetime.datetime.now().isoformat()+".json")
+        with open(calibration_filename,'w') as fp:
+            json.dump(data,fp,indent=2)
+        return calibration_filename
 
     def __call__(self):
         '''
