@@ -197,7 +197,7 @@ if __name__ == "__main__":
     ph_max = 6.2
     average_factor = 0.99
     verbose = False
-    output_dir = "/home/pi/growControl_Data_uitesting/"
+    output_dir = "/home/pi/growControl_Data/"
 
     sensor_ph = Sensor_ph(output_file_path=output_dir,
                             output_file_base="sensor_ph_bin1",
@@ -224,12 +224,18 @@ if __name__ == "__main__":
                                     warmup_time=10.*60,
                                     verbose=verbose)
     
+    # factors for temp and humidity:
+    # read_every [sec] | Factor | Time to settle from 50 to 25 (<5% error) [minutes]
+    #       15                  .9              7.25
+    #       15                  .8              3.50
+    #       30                  .9              14.5
+    #       30                  .8              7.00
     sensor_ht_ambient = Sensor_humidity_temp(output_file_path=output_dir,
                                                 output_file_base="humidity_temp_ambient",
                                                 gpio_pin=18,
-                                                read_every=5.0,
-                                                average_factor_temp=0.9,
-                                                average_factor_humidity=0.9,
+                                                read_every=30.0,
+                                                average_factor_temp=0.8,
+                                                average_factor_humidity=0.8,
                                                 #csv="test/test_inputs/sensor_humidity_temp_input.csv",
                                                 verbose=False)
     
@@ -237,9 +243,9 @@ if __name__ == "__main__":
                                                 output_file_base="humidity_temp_grow",
                                                 gpio_pin=23,
                                                 #csv="test/test_inputs/sensor_humidity_temp_input.csv",
-                                                read_every=5.0,
-                                                average_factor_temp=0.9,
-                                                average_factor_humidity=0.9,
+                                                read_every=30.0,
+                                                average_factor_temp=0.8,
+                                                average_factor_humidity=0.8,
                                                 verbose=verbose)
 
     start_dt = datetime.datetime.now()
