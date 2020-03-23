@@ -184,30 +184,33 @@ class MenuItems():
    
 if __name__ == "__main__":
 
+    # settings for how the UI is layed out
     top = 5
     left = 2
     rows_per_device = 5
     cols_per_device = 38
     col_padding = 2
 
+
+    # Settings for the controller
     ph_min = 6.0
     ph_max = 6.2
     average_factor = 0.99
     verbose = False
-    output_dir = "/home/neil/growControl_Data"
+    output_dir = "/home/pi/growControl_Data_uitesting/"
 
     sensor_ph = Sensor_ph(output_file_path=output_dir,
                             output_file_base="sensor_ph_bin1",
                             average_factor=average_factor,
-                            read_every=1.0,
-                            csv="test/test_inputs/sensor_ph_sinewave01_voltage.csv",
+                            read_every=10.0,
+                            #csv="test/test_inputs/sensor_ph_sinewave01_voltage.csv",
                             #calibrate_on_startup=True,
-                            calibration_file="test/test_inputs/sensor_ph_calibration_mock.json",
+                            #calibration_file="test/test_inputs/sensor_ph_calibration_mock.json",
                             calibrate_on_startup=False,
                             verbose=verbose)
 
-    pump_up = Controllable_Pump(None,verbose=verbose)
-    pump_down = Controllable_Pump(None,verbose=verbose)
+    pump_up = Controllable_Pump(27,verbose=verbose)
+    pump_down = Controllable_Pump(17,verbose=verbose)
     controller = Controller_ph_Pump(sensor_ph,
                                     pump_up,
                                     pump_down,
@@ -218,25 +221,25 @@ if __name__ == "__main__":
                                     ml_per_s=1.75, # ml/sec, measured 3.5ml in 2 seconds on 20200213
                                     dispense_volume=3, # ml
                                     control_every=10*60,
-                                    warmup_time=5.*60,
+                                    warmup_time=10.*60,
                                     verbose=verbose)
     
     sensor_ht_ambient = Sensor_humidity_temp(output_file_path=output_dir,
                                                 output_file_base="humidity_temp_ambient",
-                                                gpio_pin=None,
+                                                gpio_pin=18,
                                                 read_every=5.0,
-                                                average_factor_temp=0.99,
-                                                average_factor_humidity=0.99,
-                                                csv="test/test_inputs/sensor_humidity_temp_input.csv",
+                                                average_factor_temp=0.9,
+                                                average_factor_humidity=0.9,
+                                                #csv="test/test_inputs/sensor_humidity_temp_input.csv",
                                                 verbose=False)
     
     sensor_ht_grow = Sensor_humidity_temp(output_file_path=output_dir,
                                                 output_file_base="humidity_temp_grow",
-                                                gpio_pin=None,
-                                                csv="test/test_inputs/sensor_humidity_temp_input.csv",
+                                                gpio_pin=23,
+                                                #csv="test/test_inputs/sensor_humidity_temp_input.csv",
                                                 read_every=5.0,
-                                                average_factor_temp=0.99,
-                                                average_factor_humidity=0.99,
+                                                average_factor_temp=0.9,
+                                                average_factor_humidity=0.9,
                                                 verbose=verbose)
 
     start_dt = datetime.datetime.now()
@@ -254,6 +257,7 @@ if __name__ == "__main__":
             while True:
                 sensor_ph()
                 sensor_ht_ambient()
+                sensor_ht_grow()
                 controller()
 
                 val = term.inkey(timeout=.5) # how often to update the screen 
@@ -272,7 +276,6 @@ if __name__ == "__main__":
                                     current=sensor_ph.ph_raw,
                                     average=sensor_ph.ph_avg)
                 screen += sensor
-                #name,action,action_time,loop_time)
                 sensor = controller_box(top=top,
                                         left=left + col_padding + cols_per_device,
                                         width=cols_per_device,
