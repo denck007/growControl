@@ -81,7 +81,7 @@ class Sensor_humidity_temp:
         self.output_file = os.path.join(self.output_file_path,"{}_{}.csv".format(self.output_file_base,date))
         if not os.path.isfile(self.output_file):
             with open(self.output_file,'a') as fp:
-                fp.write("time,datetime_timezone,temperature_raw,temperature_average,relative_humidity_raw,relative_humidity_average\n")
+                fp.write("time,datetime_timezone,relative_humidity_raw,relative_humidity_average,temperature_raw,temperature_average\n")
 
     def _initialize_csv(self,csv):
         '''
@@ -152,6 +152,8 @@ class Sensor_humidity_temp:
         if current_time - self.read_every < min(self.last_reading_temp,self.last_reading_humidity):
             return
 
+        self.update_output_file_path() # Starts a new output file every day
+
         self.humidity_raw,self.temp_raw = self._read()
 
         if self.humidity_raw is not None:
@@ -162,8 +164,9 @@ class Sensor_humidity_temp:
             self.last_reading_temp = current_time
 
         output = "{},{},".format(time.time(),datetime.datetime.now().astimezone())
-        output += "{},{},".format(self.temp_raw,self.temp_avg)
-        output += "{},{}\n".format(self.humidity_raw,self.humidity_avg)
+        output += "{},{}".format(self.humidity_raw,self.humidity_avg)
+        output += "{},{}\n,".format(self.temp_raw,self.temp_avg)
+        
         with open(self.output_file,'a') as fp:
             fp.write(output)
 

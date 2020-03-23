@@ -52,21 +52,21 @@ class test_Sensor_humidity_temp(TestCase):
                 data_correct = fp.readlines()
             self.assertEqual(data[0],data_correct[0])
             for line,line_correct in zip(data[1:],data_correct[1:]):
-                t,_,temp_raw,temp_ma, humidity_raw, humidity_ma = line.strip("\n").split(",")
-                t_c,_,temp_raw_c,temp_ma_c, humidity_raw_c, humidity_ma_c = line_correct.strip("\n").split(",")
+                t, dt_tz, humidity_raw, humidity_avg, temp_raw, temp_avg = line.strip("\n").split(",")
+                t_c, _, humidity_raw_c, humidity_avg_c,temp_raw_c,temp_avg_c = line_correct.strip("\n").split(",")
 
                 self.assertFloatsClose(float(t),float(t_c)+start_time,eps=.02)
                 if temp_raw_c == "None":
                     self.assertEqual(temp_raw,temp_raw_c)
                 else:
                     self.assertFloatsClose(float(temp_raw),float(temp_raw_c))
-                self.assertFloatsClose(float(temp_ma),float(temp_ma_c))
+                self.assertFloatsClose(float(temp_avg),float(temp_avg_c))
 
                 if humidity_raw_c == "None":
                     self.assertEqual(humidity_raw,humidity_raw_c)
                 else:
                     self.assertFloatsClose(float(humidity_raw),float(humidity_raw_c))
-                self.assertFloatsClose(float(humidity_ma),float(humidity_ma_c))
+                self.assertFloatsClose(float(humidity_avg),float(humidity_avg_c))
 
         finally:
             os.remove(tmp_file)
@@ -103,7 +103,7 @@ class test_Sensor_humidity_temp(TestCase):
             none_counter_temp = 0
             none_counter_humidity = 0
             for line in data[1:]:
-                t, dt_tz, temp_raw, temp_avg, humidity_raw, humidity_avg = line.strip("\n").split(",")
+                t, dt_tz, humidity_raw, humidity_avg, temp_raw, temp_avg = line.strip("\n").split(",")
                 if temp_raw == "None":
                     none_counter_temp +=1
                 else: 
