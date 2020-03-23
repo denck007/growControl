@@ -82,8 +82,7 @@ class test_Sensor_humidity_temp(TestCase):
             tmp_file = tempfile.gettempdir()
             th = Sensor_humidity_temp(output_file_path=tmp_file,
                                         output_file_base="humidity_and_temp",
-                                        gpio_pin=0,
-                                        output_file_humidity=tmp_file_humidity[1],
+                                        gpio_pin=18,
                                         read_every=.15,
                                         average_factor_temp=0.9,
                                         average_factor_humidity=0.9,
@@ -95,9 +94,9 @@ class test_Sensor_humidity_temp(TestCase):
             for ii in range(2):
                 th()
 
-            with open(tmp_file_temp[1],'r') as fp:
+            with open(tmp_file,'r') as fp:
                 data = fp.readlines()
-            with open("test/test_inputs/sensor_temp_output_correct.csv",'r') as fp:
+            with open("test/test_inputs/sensor_humidity_temp_output_correct.csv",'r') as fp:
                 header_correct = fp.readline()
             
             self.assertEqual(data[0],header_correct)
