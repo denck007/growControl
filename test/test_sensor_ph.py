@@ -29,14 +29,16 @@ class test_Sensor_ph(TestCase):
         '''
         
         try:
-            tmp_file = tempfile.mkstemp(suffix=".csv")
-            s = Sensor_ph(output_file=tmp_file[1],
+            tmp_file = tempfile.gettempdir()
+            s = Sensor_ph(output_file_path=tmp_file,
+                            output_file_base="sensor_ph",
                             average_factor=0.9,
                             read_every=0.15,
                             csv="test/test_inputs/sensor_ph_input.csv",
                             calibration_file="test/test_inputs/sensor_ph_calibration_mock.json",
                             calibrate_on_startup=False,
                             verbose=False)
+            tmp_file = s.output_file # update with the filename the object creates
 
             loop_time = 0.1
             start_time = time.time()
@@ -45,7 +47,7 @@ class test_Sensor_ph(TestCase):
                 loop_end = time.time()
                 time.sleep(start_time+(ii+1)*loop_time - loop_end)
 
-            with open(tmp_file[1],'r') as fp:
+            with open(tmp_file,'r') as fp:
                 data = fp.readlines()
             with open("test/test_inputs/sensor_ph_output_correct.csv",'r') as fp:
                 data_correct = fp.readlines()
@@ -54,8 +56,8 @@ class test_Sensor_ph(TestCase):
             self.assertEqual(data[0],data_correct[0])
 
             for line,line_correct in zip(data[1:],data_correct[1:]):
-                t,_,_,v_raw,v_avg,ph_raw,ph_avg = line.strip("\n").split(",")
-                t_c,_,_,v_raw_c,v_avg_c,ph_raw_c,ph_avg_c = line_correct.strip("\n").split(",")
+                t,_,v_raw,v_avg,ph_raw,ph_avg = line.strip("\n").split(",")
+                t_c,_,v_raw_c,v_avg_c,ph_raw_c,ph_avg_c = line_correct.strip("\n").split(",")
 
                 self.assertFloatsClose(float(t),float(t_c)+start_time,eps=.02) # Not really possible to gaurentee timesteps on order of 1ms
                 self.assertFloatsClose(float(v_avg),float(v_avg_c))
@@ -73,7 +75,7 @@ class test_Sensor_ph(TestCase):
         except:
             raise
         finally:
-            os.remove(tmp_file[1])
+            os.remove(tmp_file)
 
     def test_sensor_ph_real_sensor(self):
         '''
@@ -85,19 +87,21 @@ class test_Sensor_ph(TestCase):
             return
         
         try:
-            tmp_file = tempfile.mkstemp(suffix=".csv")
-            s = Sensor_ph(output_file=tmp_file[1],
+            tmp_file = tempfile.gettempdir()
+            s = Sensor_ph(output_file_path=tmp_file,
+                            output_file_base="sensor_ph",
                             average_factor=0.9,
                             read_every=0.,
                             csv=None,
                             calibration_file="test/test_inputs/sensor_ph_calibration_mock.json",
                             calibrate_on_startup=False,
                             verbose=False)
+            tmp_file = s.output_file # update with the filename the object creates
 
             start_time = time.time()
             for ii in range(2):
                 s()
-            with open(tmp_file[1],'r') as fp:
+            with open(tmp_file,'r') as fp:
                 data = fp.readlines()
             with open("test/test_inputs/sensor_ph_output_correct.csv",'r') as fp:
                 header_correct = fp.readline()
@@ -106,7 +110,7 @@ class test_Sensor_ph(TestCase):
             none_counter_voltage = 0
             none_counter_ph = 0
             for line in data[1:]:
-                t, dt, dt_tz, v_raw, v_avg, ph_raw, ph_avg = line.strip("\n").split(",")
+                t, dt_tz, v_raw, v_avg, ph_raw, ph_avg = line.strip("\n").split(",")
                 if v_raw == "None":
                     none_counter_voltage +=1
                 else: 
@@ -135,5 +139,5 @@ class test_Sensor_ph(TestCase):
 
 
         finally:
-            os.remove(tmp_file[1])
+            os.remove(tmp_file)
 

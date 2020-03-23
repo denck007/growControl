@@ -23,7 +23,8 @@ class Sensor_ph:
     
 
     def __init__(self,
-                  output_file, 
+                  output_file_path,
+                  output_file_base, 
                   average_factor=0.9,
                   read_every=30.,
                   csv=None,
@@ -32,17 +33,26 @@ class Sensor_ph:
                   verbose=False):
         '''
         Create the instance of the ph sensor
-         
-        If use_csv is not None then it must be a valid file path. This is only for debugging
-            the csv file is a file with rows of a single float which is a voltage corresponding to a ph value
-                it should be the same as what data_stream.voltage would return
+        
+        output_file_path: path to where the output data should be saved
+        output_file_base: start of the output file name. This will get the date appended to it
+        average_factor: float (0,1), the weighting factor for the exponential moving average calculation
+        read_every: float > 0, Minimum number of seconds between each reading
+        csv: None or path ot csv file to use as a mock input.
+                If csv is not None then it must be a valid file path. This is only for debugging
+                    the csv file is a file with rows of a single float which is a voltage corresponding to a ph value
+                    it should be the same as what data_stream.voltage would return
+        calibration_file: None or path to json file with calibration data. The file must contain keys "m" and "b" with floats corresponding
+                            to the slope and y-intercept of the voltage vs ph plot
+        calibrate_on_startup: Boolean, As for calibration to be done when the object is created
+        verbose: Boolean, Output the data to standard out
         '''
         self.verbose = verbose
 
-        self.output_file = output_file
-        os.makedirs(os.path.dirname(self.output_file),exist_ok=True)
-        with open(self.output_file,'a') as fp:
-            fp.write("time,datetime,datetime_timezone,voltage_raw,voltage_avg,ph_raw,ph_avg\n")        
+        self.output_file_path = output_file_path
+        self.output_file_base = output_file_base
+        os.makedirs(os.path.dirname(self.output_file_path),exist_ok=True)
+        self.update_output_file_path()     
 
         # how much of the previous value to keep result = previous * average_factor + new * (1-average_factor)
         #   A larger value makes it slower to respond but is more noise resistant
@@ -70,8 +80,26 @@ class Sensor_ph:
 
         self.last_reading = time.time() - self.read_every - 1 # make it so imediatly the data is out of date to force reading
 
+        self.voltage_raw = None # initilize the value of the current voltage
         self.voltage_avg = 0. # the average voltage value, initalize to 0.0 volts which is 7.0 ph
+        self.ph_raw = None # initilize the ph value
         self.ph_avg = 7.0 # the averaged ph value, set to neutral ph
+
+    def update_output_file_path(self):
+        '''
+        Updates the property self.output_file
+        Checks to see if the file <self.output_file_path> + <self.output_file_base> + <date in YYYY-MM-DD format> .csv
+            If it does:
+                do nothing
+            If it does not exist:
+                create it and initialize the header
+        '''
+
+        date = datetime.date.today().isoformat()
+        self.output_file = os.path.join(self.output_file_path,"{}_{}.csv".format(self.output_file_base,date))
+        if not os.path.isfile(self.output_file):
+            with open(self.output_file,'a') as fp:
+                fp.write("time,datetime_timezone,voltage_raw,voltage_avg,ph_raw,ph_avg\n")
 
     def _initialize_csv(self,csv):
         '''
@@ -181,7 +209,6 @@ class Sensor_ph:
 
         calibration_time = 15 # seconds
         calibration_sps = 5 # number of samples per second while doing calibration
-        calibration_pause = 1.0/calibration_sps #  seconds to wait between samples
 
         data = {"4ph_raw":[],
                 "7ph_raw":[],
@@ -192,45 +219,60 @@ class Sensor_ph:
 
         # Read 4ph solution
         input("Place probe in 4ph solution and press <Enter>...")
-        end_time = time.time() + calibration_time
-        counter = 0
-        print('Reading...',end="")
-        while time.time() < end_time:
-            counter += 1
-            if counter == (calibration_sps//3):
-                print(".",end="")
-            data["4ph_raw"].append(self._read())
-            time.sleep(calibration_pause)
-        print("\nFinished reading 4ph solution.")
-        data["4ph_mean"] = sum(data["4ph_raw"])/len(data["4ph_raw"])
-        print("Average reading for 4ph solution is {:.6f} volts".format(data["4ph_mean"]))
+        data.update(self._calibration_get_point_data("4ph",duration=calibration_time,sps=calibration_sps))
 
-        # Read 7ph solution
         input("Place probe in 7ph solution and press <Enter>...")
-        end_time = time.time() + calibration_time
-        counter = 0
-        print('Reading...',end="")
-        while time.time() < end_time:
-            counter += 1
-            if counter == (calibration_sps//3):
-                print(".",end="")
-            data["7ph_raw"].append(self._read())
-            time.sleep(calibration_pause)
-        print("\nFinished reading 7ph solution.")
-        data["7ph_mean"] = sum(data["7ph_raw"])/len(data["7ph_raw"])
-        print("Average reading for 7ph solution is {:.6f} volts".format(data["7ph_mean"]))
+        data.update(self._calibration_get_point_data("7ph",duration=calibration_time,sps=calibration_sps))
 
-        data["m"] = (4.01-7.0)/(data["4ph_mean"]-data["7ph_mean"])
-        data["b"]  = 7.04 - data["m"] *data["7ph_mean"]
+        data.update(self._calibration_compute_line(data))
+        
+        print("Average reading for 4ph solution is {:.6f} volts".format(data["4ph_mean"]))
+        print("Average reading for 7ph solution is {:.6f} volts".format(data["7ph_mean"]))
         print("Calibration results: ph = {:.6f}*reading + {:.6f}".format(data["m"],data["b"]))
         print("\t{:.6f} ph/V == {:.6f} v/ph, ideal is 0.05916 mV/ph".format(data["m"],1/data["m"]))
         print("Ideal sensor params: ph = {:.6f}*reading + {:.6f}".format(-1/.05916,7.0))
 
-        calibration_path = os.path.dirname(os.path.abspath(self.output_file))
-        calibration_file = os.path.join(calibration_path,'sensor_ph_calibration_raw_'+datetime.datetime.now().isoformat()+".json")
-        with open(calibration_file,'w') as fp:
-            json.dump(data,fp,indent=2)
+        calibration_file = self._calibration_save_data(data)
         self._load_calibration_params(calibration_file=calibration_file)
+
+    def _calibration_get_point_data(self,name,duration=15,sps=5):
+        pause_time = 1./float(sps)
+
+        if not (name=="4ph" or name=="7ph"):
+            raise ValueError("in _calibrate_point, name must be either '4ph' or '7ph'")
+        
+        raw_data = []
+        end_time = time.time() + duration
+        while time.time() < end_time:
+            raw_data.append(self._read())
+            time.sleep(pause_time)
+
+        mean = sum(raw_data)/len(raw_data)
+        data = {"{}_raw".format(name):raw_data,
+                "{}_mean".format(name):mean}
+
+        return data        
+
+    def _calibration_compute_line(self,data):
+        '''
+        Given a dict with keys '4ph_mean' and '7ph_mean', compute the y-intercept and slope 
+            to compute ph from the voltate measurement
+        '''
+        if ('4ph_mean' not in data) or ('7ph_mean' not in data):
+            raise ValueError("in _compute_calibration, 'data' must have keys '4ph_mean' and '7ph_mean. Existing keys are: {}".format(list(data.keys())))
+
+        data["m"] = (4.01-7.0)/(data["4ph_mean"]-data["7ph_mean"])
+        data["b"]  = 7.04 - data["m"] *data["7ph_mean"]
+        return data
+
+    def _calibration_save_data(self,data):
+        '''
+        Save the calibration data to disk
+        '''
+        calibration_filename = os.path.join(self.output_file_path,'sensor_ph_calibration_raw_'+datetime.datetime.now().isoformat()+".json")
+        with open(calibration_filename,'w') as fp:
+            json.dump(data,fp,indent=2)
+        return calibration_filename
 
     def __call__(self):
         '''
@@ -240,33 +282,34 @@ class Sensor_ph:
         if current_time - self.read_every < self.last_reading:
             # not enough time has passed since last reading, just return
             return
-    
-        voltage = self._read()
-        if voltage is None:
-            ph = None
+
+        self.update_output_file_path() # Starts a new output file every day
+
+        self.voltage_raw = self._read()
+        if self.voltage_raw is None:
+            self.ph_raw = None
         else:
-            ph = self.convert_voltage_to_ph(voltage)
+            self.ph_raw = self.convert_voltage_to_ph(self.voltage_raw)
             self.last_reading = current_time # Only change if a valid voltage is read
         
         # If there was an error reading voltage is none. 
         #   In this case we do not want to update the moving average
-        if voltage is not None: 
-            self.voltage_avg = self.voltage_avg * self.average_factor + voltage * (1-self.average_factor)
-            self.ph_avg = self.ph_avg * self.average_factor + ph * (1-self.average_factor)
+        if self.voltage_raw is not None: 
+            self.voltage_avg = self.voltage_avg * self.average_factor + self.voltage_raw * (1-self.average_factor)
+            self.ph_avg = self.ph_avg * self.average_factor + self.ph_raw * (1-self.average_factor)
 
-        #fp.write("time,datetime,datetime_timezone,voltage_raw,voltage_avg,ph_raw,ph_avg\n")
-        output = "{},{},{},".format(time.time(),datetime.datetime.now(),datetime.datetime.now().astimezone())
-        output += "{},{},{},{}\n".format(voltage,self.voltage_avg,ph,self.ph_avg)
+        #fp.write("time,datetime_timezone,voltage_raw,voltage_avg,ph_raw,ph_avg\n")
+        output = "{},{},".format(time.time(),datetime.datetime.now().astimezone())
+        output += "{},{},{},{}\n".format(self.voltage_raw,self.voltage_avg,self.ph_raw,self.ph_avg)
         with open(self.output_file,'a') as fp:
             fp.write(output)
 
         if self.verbose:
             t = datetime.datetime.strftime(datetime.datetime.now(),"%m/%d %H:%M:%S")
-            if type(ph) is float:
-                print("{}       ph: Current: {:.2f} Average: {:.2f}".format(t,ph,self.ph_avg))
+            if type(self.ph_raw) is float:
+                print("{}       ph: Current: {:.2f} Average: {:.2f}".format(t,self.ph_raw,self.ph_avg))
             else:
-                print("{}       ph: Current: {} Average: {:.2f}".format(t,ph,self.ph_avg))
-        return ph
+                print("{}       ph: Current: {} Average: {:.2f}".format(t,self.ph_raw,self.ph_avg))
 
 if __name__ == "__main__":
     s_csv = Sensor_ph(output_file="tmp_output_files/ph_{:.0f}.csv".format(time.time()),

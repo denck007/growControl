@@ -1,0 +1,9 @@
+time,datetime_timezone,relative_humidity_raw,relative_humidity_average,temperature_raw,temperature_average
+0,_,50.5,50.1,20.5,20.05
+0.2,_,None,50.1,21.5,20.195
+0.3,_,51.5,50.38,22.5,20.4255
+0.5,_,None,50.38,None,20.4255
+0.6,_,52.5,50.804,23.5,20.73295
+0.8,_,None,50.804,None,20.73295
+0.9,_,53.5,51.3432,None,20.73295
+1,_,54.5,51.97456,24.5,21.109655

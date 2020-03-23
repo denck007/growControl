@@ -29,27 +29,32 @@ class test_Controller_ph_Pump(TestCase):
             * headers are correct
             '''
         try:
-            tmp_file_sensor_ph = tempfile.mkstemp(suffix=".csv")
-            s = Sensor_ph(output_file=tmp_file_sensor_ph[1],
+            tmp_file_sensor_ph = tempfile.gettempdir()
+            s = Sensor_ph(output_file_path=tmp_file_sensor_ph,
+                            output_file_base="sensor_ph",
                             average_factor=0., # this will make no averaging happen
                             read_every=0.0, # read every chance it gets
                             csv="test/test_inputs/controller_ph_pump_test_ph_input_file.csv",
                             calibration_file="test/test_inputs/sensor_ph_calibration_mock.json",
                             calibrate_on_startup=False)
+            tmp_file_sensor_ph = s.output_file
             pump_up = Controllable_Pump(gpio_pin=None)
             pump_down = Controllable_Pump(gpio_pin=None)
 
-            tmp_file_controller = tempfile.mkstemp(suffix=".csv")
+            tmp_file_controller = tempfile.gettempdir()
             controller = Controller_ph_Pump(s,
                                             pump_up,
                                             pump_down,
-                                            output_file=tmp_file_controller[1].format(time.time()),
+                                            output_file_path=tmp_file_controller,
+                                            output_file_base="controller_ph_pump",
                                             ph_min=5.8,
                                             ph_max=6.2,
                                             ml_per_s=5.0, # ml/sec
                                             dispense_volume=0.3, # ml
                                             control_every=0.15,
                                             warmup_time=.25)
+            tmp_file_controller = controller.output_file
+
             self.assertFloatsClose(controller.dispense_time,0.06) # check dispense_time is correct
 
 
@@ -65,7 +70,7 @@ class test_Controller_ph_Pump(TestCase):
                 time.sleep((start_time+(ii+1)*expected_loop_time) - loop_end) # force a loop to take a specific amount of time
 
             # Get the output file that was just made
-            with open(tmp_file_controller[1],'r') as fp:
+            with open(tmp_file_controller,'r') as fp:
                 data = fp.readlines()
                 header = data[0]
                 data = data[1:] # remove headers
@@ -82,8 +87,8 @@ class test_Controller_ph_Pump(TestCase):
             self.assertEqual(header,header_correct)
             
             for line, line_correct in zip(data,data_correct):
-                t, dt, dt_tz, down_t, down_v, up_t, up_v = line
-                t_c, _, _, down_t_c, down_v_c, up_t_c, up_v_c = line_correct
+                t, dt_tz, down_t, down_v, up_t, up_v = line
+                t_c, _, down_t_c, down_v_c, up_t_c, up_v_c = line_correct
                  # make sure the times are saved correctly
                  # The looping logic ensures that a new loop is started every expected_loop_time
                  # t_c is relative to start of the run
@@ -96,8 +101,8 @@ class test_Controller_ph_Pump(TestCase):
         except:
             raise
         finally:
-            os.remove(tmp_file_sensor_ph[1])
-            os.remove(tmp_file_controller[1])
+            os.remove(tmp_file_sensor_ph)
+            os.remove(tmp_file_controller)
             pump_up.cleanup()
             pump_down.cleanup()
 
