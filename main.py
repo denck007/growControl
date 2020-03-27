@@ -188,13 +188,13 @@ if __name__ == "__main__":
     top = 5
     left = 2
     rows_per_device = 5
-    cols_per_device = 38
+    cols_per_device = 35
     col_padding = 2
 
 
     # Settings for the controller
-    ph_min = 6.0
-    ph_max = 6.2
+    ph_min = 5.7
+    ph_max = 6.0
     average_factor = 0.99
     verbose = False
     output_dir = "/home/pi/growControl_Data/"
@@ -221,7 +221,7 @@ if __name__ == "__main__":
                                     ml_per_s=1.75, # ml/sec, measured 3.5ml in 2 seconds on 20200213
                                     dispense_volume=3, # ml
                                     control_every=10*60,
-                                    warmup_time=10.*60,
+                                    warmup_time=20.*60,
                                     verbose=verbose)
     
     # factors for temp and humidity:
@@ -310,15 +310,15 @@ if __name__ == "__main__":
                                     left=left,
                                     width=cols_per_device,
                                     name="Chamber Temperature Sensor",
-                                    current=sensor_ht_ambient.temp_raw,
-                                    average=sensor_ht_ambient.temp_avg)
+                                    current=sensor_ht_grow.temp_raw,
+                                    average=sensor_ht_grow.temp_avg)
                 screen += sensor
                 sensor = sensor_box(top=top+2*rows_per_device,
                                     left=left + col_padding + cols_per_device,
                                     width=cols_per_device,
                                     name="Chamber Humidity Sensor",
-                                    current=sensor_ht_ambient.humidity_raw,
-                                    average=sensor_ht_ambient.humidity_avg)
+                                    current=sensor_ht_grow.humidity_raw,
+                                    average=sensor_ht_grow.humidity_avg)
                 screen += sensor
 
                 # Handle the titles and menu
