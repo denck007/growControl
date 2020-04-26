@@ -80,7 +80,7 @@ def quit():
 def ph_calibration():
 
     calibration_data = {}
-    calibration_time = 1 # seconds
+    calibration_time = 15 # seconds
     calibration_samples_per_second = 5
 
     def ph_calibration_menu():
@@ -179,7 +179,6 @@ class MenuItems():
             x = idx%n_cols * col_width
             y = term.height - n_rows + idx//n_cols
             s += term.move_xy(x,y) + str(item)
-                
         return s
    
 if __name__ == "__main__":
@@ -193,8 +192,9 @@ if __name__ == "__main__":
 
 
     # Settings for the controller
-    ph_min = 5.7
-    ph_max = 6.0
+    # set to 6.0/6.4 from 5.7/6.0 on 20200422T2310 to conserve ph solution
+    ph_min = 6.0 # set to 5.0 from 5.7 on 20200329T1045 to see where the system wants to be
+    ph_max = 6.4
     average_factor = 0.99
     verbose = False
     output_dir = "/home/pi/growControl_Data/"
@@ -220,8 +220,8 @@ if __name__ == "__main__":
                                     output_file_base="controller_ph_pump",
                                     ml_per_s=1.75, # ml/sec, measured 3.5ml in 2 seconds on 20200213
                                     dispense_volume=3, # ml
-                                    control_every=10*60,
-                                    warmup_time=20.*60,
+                                    control_every=30*60,
+                                    warmup_time=30.*60,
                                     verbose=verbose)
     
     # factors for temp and humidity:
