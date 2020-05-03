@@ -23,6 +23,7 @@ class Sensor_volume:
                   output_file_base, 
                   trigger_pin=None,
                   echo_pin=None,
+                  iterations_per_reading=5,
                   average_factor=0.9,
                   read_every=30.,
                   csv=None,
@@ -34,19 +35,25 @@ class Sensor_volume:
         
         output_file_path: path to where the output data should be saved
         output_file_base: start of the output file name. This will get the date appended to it
+        trigger_pin: int - the pin to use to trigger the sensor
+        echo_pin: int - the pin to recieve the echo on.
+        iterations_per_reading: int, Take this many sensor readings and average them together to get the actual reading
         average_factor: float (0,1), the weighting factor for the exponential moving average calculation
         read_every: float > 0, Minimum number of seconds between each reading
         csv: None or path ot csv file to use as a mock input.
                 If csv is not None then it must be a valid file path. This is only for debugging
                     the csv file is a file with rows of a single float which is a time reading from the sensor
                     it should be the time of the pulse duration from the echo response
-        calibration_file: None or path to json file with calibration data. The file must contain keys for XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+        calibration_file: None or path to json file with calibration data. 
+                            The file must contain keys for 'm' (slope) and 'b' (y-intercept)
+                            volume = m*pulse_duration + b
         calibrate_on_startup: Boolean, As for calibration to be done when the object is created
         verbose: Boolean, Output the data to standard out
         '''
         self.verbose = verbose
         self.trigger_pin = trigger_pin
         self.echo_pin = echo_pin
+        self.iterations_per_reading = iterations_per_reading
 
         self.output_file_path = output_file_path
         self.output_file_base = output_file_base
@@ -94,7 +101,7 @@ class Sensor_volume:
         self.output_file = os.path.join(self.output_file_path,"{}_{}.csv".format(self.output_file_base,date))
         if not os.path.isfile(self.output_file):
             with open(self.output_file,'a') as fp:
-                fp.write("time,datetime_timezone,time_raw,time_avg,volume_raw,volume_avg\n")
+                fp.write("time,datetime_timezone,pulse_duration_raw,pulse_duration_avg,volume_raw,volume_avg\n")
 
     def _initialize_csv(self,csv):
         '''
@@ -133,52 +140,53 @@ class Sensor_volume:
     
     def _read_sensor(self):
         '''
-        Read the value from the real sensor
+        Read the sensor self.iterations_per_reading times and return the average value
         
         Returns the duration of the pulse for the distance measurement
 
         Sets the trigger pin high for 10micro seconds
         Then times the duration of the response
+        Repeats this self.iterations_per_reading times
         '''
-        try:
-            # Send out signal
-            GPIO.output(self.trigger_pin,True)
-            time.sleep(.00001)
-            GPIO.output(self.trigger_pin,False)
+        counts = 0
+        sums = 0
+        for _ in range(self.iterations_per_reading):
+            try:
+                # Send out signal
+                GPIO.output(self.trigger_pin,True)
+                time.sleep(.00001)
+                GPIO.output(self.trigger_pin,False)
 
-            # Find the start of the response
-            while GPIO.input(self.echo_pin) == 0:
-                pulse_start = time.time()
-            # Find the end of the response
-            while GPIO.input(self.echo_pin) == 1:
-                pulse_end = time.time()
+                # Find the start of the response
+                while GPIO.input(self.echo_pin) == 0:
+                    pulse_start = time.time()
+                # Find the end of the response
+                while GPIO.input(self.echo_pin) == 1:
+                    pulse_end = time.time()
 
-            value = pulse_end - pulse_start
-            
-        except:
-            e = sys.exc_info()
-            print("Exception thrown while reading SR04 Ultrasonic Distance Sensor:")
-            print("{}: {}".format(e[0],e[1]))
-            value = None
-        return value
+                value = pulse_end - pulse_start
+                counts += 1
+                sums += value
+                
+            except:
+                e = sys.exc_info()
+                print("Exception thrown while reading SR04 Ultrasonic Distance Sensor:")
+                print("{}: {}".format(e[0],e[1]))
+                value = None
+        return sums/counts
 
     def _load_calibration_params(self,calibration_file=None):
         '''
         Set the calibration parameters from a file
         If the file does not exist prompt to calibrate
         '''
-
-        need to update and define calibration method.
-        Think have table with gallons to time measurements, then interpolate to get values.
-        The tank walls are not flat and depth/volume is not consistent.
-
         if calibration_file is None:
             # no calibration data was was given, so try and find the file in the output directory
             calibration_path = os.path.dirname(os.path.abspath(self.output_file))
             print(calibration_path)
-            calibration_files = [fname for fname in os.listdir(calibration_path) if "sensor_ph_calibration_" in fname]
+            calibration_files = [fname for fname in os.listdir(calibration_path) if "{}_calibration_".format(self.__class__.__name__.lower()) in fname]
             if len(calibration_files) == 0:
-                print("No calibration data found, please calibrate now")
+                print("No calibration data found for class {}, please calibrate now".format(self.__class__.__name__))
                 self.calibrate()
                 self._load_calibration_params()
                 return
@@ -196,90 +204,62 @@ class Sensor_volume:
         self.calibration_value_b = float(data["b"])
         print("Successfully loaded calibration data!")
 
-        #self.calibration_value_m = -1/0.057 # volts per ph unit
-        #self.calibration_value_b = 7. # volts of bias in ph unit
-
     def convert_pulse_duration_to_volume(self,pulse_duration):
         '''
         Using the calibration values convert the pulse duration to a volume measurement
         '''
-        return self.calibration_value_m * voltage + self.calibration_value_b
+        return self.calibration_value_m * pulse_duration + self.calibration_value_b
 
     def calibrate(self):
         '''
         Perform a calibration routine on the sensor
-        Will ask user to place in a 4 ph solution, then a 7ph solution
+        Asks user to add in water, and record the volume that they added.
+
         It will record:
-            * Raw and calculated values to a file called 'sensor_ph_calibration_<timestamp>'
+            * Raw and calculated values to a file called 'sensor_volume_calibration_<timestamp>'
         '''
-        calibrate = input("Calibrate Sensor? If no, will load most recent calibration data <y/n>\n")
+        calibrate = input("Calibrate Volume Sensor? If no, will load most recent calibration data <y/n>\n")
         if calibrate.lower()[0] != "y":
             self._load_calibration_params()
             return
 
-        calibration_time = 15 # seconds
-        calibration_sps = 5 # number of samples per second while doing calibration
+        volume = []
+        pulse_durations = [] # list readings time from the sensor
+        volume_raw = input("Enter current volume in the tank: ")
+        volume.append(float(volume_raw))
+        pulse_durations.append(self._read())
 
-        data = {"4ph_raw":[],
-                "7ph_raw":[],
-                "4ph_mean":None,
-                "7ph_mean":None,
-                "m":None,
-                "b":None}
+        while True:
+            volume_raw = input("Enter the volume added since last record (enter nothing to complete): ")
+            if volume_raw == "":
+                break
+            volume.append(volume[-1] + float(volume_raw)) # entered change, recording total accumulated
+            pulse_durations.append(self._read())
 
-        # Read 4ph solution
-        input("Place probe in 4ph solution and press <Enter>...")
-        data.update(self._calibration_get_point_data("4ph",duration=calibration_time,sps=calibration_sps))
-
-        input("Place probe in 7ph solution and press <Enter>...")
-        data.update(self._calibration_get_point_data("7ph",duration=calibration_time,sps=calibration_sps))
-
-        data.update(self._calibration_compute_line(data))
-        
-        print("Average reading for 4ph solution is {:.6f} volts".format(data["4ph_mean"]))
-        print("Average reading for 7ph solution is {:.6f} volts".format(data["7ph_mean"]))
-        print("Calibration results: ph = {:.6f}*reading + {:.6f}".format(data["m"],data["b"]))
-        print("\t{:.6f} ph/V == {:.6f} v/ph, ideal is 0.05916 mV/ph".format(data["m"],1/data["m"]))
-        print("Ideal sensor params: ph = {:.6f}*reading + {:.6f}".format(-1/.05916,7.0))
+        data = self._calibration_compute_line(volume,pulse_durations)
+        data["volume_raw"] = volume_raw
+        data["pulse_durations"] = pulse_durations        
 
         calibration_file = self._calibration_save_data(data)
         self._load_calibration_params(calibration_file=calibration_file)
 
-    def _calibration_get_point_data(self,name,duration=15,sps=5):
-        pause_time = 1./float(sps)
-
-        if not (name=="4ph" or name=="7ph"):
-            raise ValueError("in _calibrate_point, name must be either '4ph' or '7ph'")
-        
-        raw_data = []
-        end_time = time.time() + duration
-        while time.time() < end_time:
-            raw_data.append(self._read())
-            time.sleep(pause_time)
-
-        mean = sum(raw_data)/len(raw_data)
-        data = {"{}_raw".format(name):raw_data,
-                "{}_mean".format(name):mean}
-
-        return data        
-
-    def _calibration_compute_line(self,data):
+    def _calibration_compute_line(self,volume,pulse_durations):
         '''
-        Given a dict with keys '4ph_mean' and '7ph_mean', compute the y-intercept and slope 
-            to compute ph from the voltate measurement
+        Given lists of the accumulated volute and the pulse durations, 
+            determine a line that takes in a pulse duration and returns a volume
         '''
-        if ('4ph_mean' not in data) or ('7ph_mean' not in data):
-            raise ValueError("in _compute_calibration, 'data' must have keys '4ph_mean' and '7ph_mean. Existing keys are: {}".format(list(data.keys())))
-
-        data["m"] = (4.01-7.0)/(data["4ph_mean"]-data["7ph_mean"])
-        data["b"]  = 7.04 - data["m"] *data["7ph_mean"]
-        return data
-
+        import numpy as np
+        ys = np.array(volume,dtype=np.float32)
+        xs = np.array(pulse_durations,dtype=np.float32)
+        model = np.polyfit(xs,ys,1)
+        return {"m": model[0], "b": model[1]}
+    
     def _calibration_save_data(self,data):
         '''
         Save the calibration data to disk
         '''
-        calibration_filename = os.path.join(self.output_file_path,'sensor_ph_calibration_raw_'+datetime.datetime.now().isoformat()+".json")
+        calibration_filename = os.path.join(self.output_file_path,"{}_calibration_raw_{}.json".format(self.__class__.__name__.lower(),
+                                                                                                    datetime.datetime.now().isoformat()))
         with open(calibration_filename,'w') as fp:
             json.dump(data,fp,indent=2)
         return calibration_filename
@@ -299,8 +279,8 @@ class Sensor_volume:
         if self.pulse_duration_raw is None:
             self.volume_raw = None
         else:
-            self.ph_raw = self.convert_pulse_duration_to_volume(self.pulse_duration_raw)
-            self.last_reading = current_time # Only change if a valid voltage is read
+            self.volume_raw = self.convert_pulse_duration_to_volume(self.pulse_duration_raw)
+            self.last_reading = current_time # Only change if a valid reading
         
         # If there was an error reading the pulse duration is none. 
         #   In this case we do not want to update the moving average
@@ -308,7 +288,7 @@ class Sensor_volume:
             self.pulse_duration_avg = self.pulse_duration_avg * self.average_factor + self.pulse_duration_raw * (1-self.average_factor)
             self.volume_avg = self.volume_avg * self.average_factor + self.volume_raw * (1-self.average_factor)
 
-        #fp.write("time,datetime_timezone,time_raw,time_avg,volume_raw,volume_avg\n")
+        #fp.write("times,datetime_timezone,pulse_duration_raw,pulse_duration_avg,volume_raw,volume_avg\n")
         output = "{},{},".format(time.time(),datetime.datetime.now().astimezone())
         output += "{},{},{},{}\n".format(self.pulse_duration_raw,self.pulse_duration_avg,self.volume_raw,self.volume_avg)
         with open(self.output_file,'a') as fp:
@@ -316,7 +296,28 @@ class Sensor_volume:
 
         if self.verbose:
             t = datetime.datetime.strftime(datetime.datetime.now(),"%m/%d %H:%M:%S")
-            if type(self.ph_raw) is float:
+            if type(self.volume_raw) is float:
                 print("{}       Volume: Current: {:.2f} Average: {:.2f}".format(t,self.volume_raw,self.volume_avg))
             else:
                 print("{}       Volume: Current: {} Average: {:.2f}".format(t,self.volume_raw,self.volume_avg))
+
+
+if __name__ == "__main__":
+    output_path = "/home/pi/growControl/temp_outputs"
+    input_csv = "/home/pi/growControl/test/test_inputs/sensor_volume_data_to_calibrate.csv"
+    os.makedirs(output_path,exist_ok=True)
+    s = Sensor_volume(output_file_path=output_path,
+                        output_file_base="sensor_volume", 
+                        trigger_pin=None,
+                        echo_pin=None,
+                        iterations_per_reading=1,
+                        average_factor=0.9,
+                        read_every=.00001,
+                        csv=input_csv,
+                        calibration_file=None,
+                        calibrate_on_startup=True,
+                        verbose=True)
+
+    for ii in range(5):
+        s()
+        time.sleep(.01)
