@@ -101,7 +101,7 @@ class test_Sensor_ph(TestCase):
             start_time = time.time()
             for ii in range(2):
                 s()
-            with open(tmp_file[1],'r') as fp:
+            with open(tmp_file,'r') as fp:
                 data = fp.readlines()
             with open("test/test_inputs/sensor_ph_output_correct.csv",'r') as fp:
                 header_correct = fp.readline()
