@@ -140,6 +140,7 @@ class Sensor_volume:
         '''
         Initialize the sensor
         '''
+        GPIO.setmode(GPIO.BCM)
         GPIO.setup(self.trigger_pin,GPIO.OUT)
         GPIO.setup(self.echo_pin,GPIO.IN)
 

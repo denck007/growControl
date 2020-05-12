@@ -83,20 +83,22 @@ class test_Sensor_volume(TestCase):
         Verifies:
             * Recorded time is correct
         '''
-        if os.uname().machine != "armv6l":
+        machine = os.uname().machine
+        if not (machine == "armv6l" or machine == "armv7l") :
             print("test_sensor_ph_real_readings only works on the raspberrypi!")
             return
         
-        return
-        '''
         try:
             tmp_file = tempfile.gettempdir()
-            s = Sensor_ph(output_file_path=tmp_file,
-                            output_file_base="sensor_ph",
-                            average_factor=0.9,
-                            read_every=0.,
+            s = Sensor_volume(output_file_path=tmp_file,
+                            output_file_base="sensor_volume",
+                            trigger_pin=23,
+                            echo_pin=24,
+                            iterations_per_reading=2,
+                            average_factor=0.8,
+                            read_every=0.001,
                             csv=None,
-                            calibration_file="test/test_inputs/sensor_ph_calibration_mock.json",
+                            calibration_file="test/test_inputs/sensor_volume_calibration_mock.json",
                             calibrate_on_startup=False,
                             verbose=False)
             tmp_file = s.output_file # update with the filename the object creates
@@ -104,45 +106,41 @@ class test_Sensor_volume(TestCase):
             start_time = time.time()
             for ii in range(2):
                 s()
+                time.sleep(.01)
             with open(tmp_file,'r') as fp:
                 data = fp.readlines()
-            with open("test/test_inputs/sensor_ph_output_correct.csv",'r') as fp:
+            with open("test/test_inputs/sensor_volume_test_output_correct.csv",'r') as fp:
                 header_correct = fp.readline()
             
             self.assertEqual(data[0],header_correct)
             none_counter_voltage = 0
             none_counter_ph = 0
             for line in data[1:]:
-                t, dt_tz, v_raw, v_avg, ph_raw, ph_avg = line.strip("\n").split(",")
-                if v_raw == "None":
+                t, dt_tz, time_raw, time_avg, volume_raw, volume_avg = line.strip("\n").split(",")
+                if time_raw == "None":
                     none_counter_voltage +=1
                 else: 
                     #If the items cannot be converted to float an error will be thrown
-                    v_raw = float(v_raw)
-                    v_avg = float(v_avg)
-                    self.assertTrue(v_raw > -0.2,msg="Raw voltage should be over -0.2v (~3.5ph)")
-                    self.assertTrue(v_raw < 0.2,msg="Raw voltage should be under 0.2v (~10.5ph)")
-                    self.assertTrue(v_avg > -0.2,msg="Average voltage should be over -0.2v (~3.5ph)")
-                    self.assertTrue(v_avg < 0.2,msg="Average voltage should be under 0.2v (~10.5ph)")
+                    time_raw = float(time_raw)
+                    time_avg = float(time_avg)
+                    self.assertTrue(time_raw > 0.,msg="Raw pulse duration should be over 0.0s")
+                    self.assertTrue(time_raw < 0.029,msg="Raw pulse duration should be under 0.029s (~5 meters)")
+                    self.assertTrue(time_avg > 0.0,msg="Average pulse duration should be over 0.0s")
+                    self.assertTrue(time_avg < 0.029,msg="Average pulse duration should be under 0.029s (~5 meters)")
 
-                if ph_raw == "None":
+                if volume_raw == "None":
                     none_counter +=1
                 else: 
                     #If the items cannot be converted to float an error will be thrown
-                    ph_raw = float(ph_raw)
-                    ph_avg = float(ph_avg)
-                    self.assertTrue(ph_raw > 3.5,msg="Raw ph should be over -0.2v (~3.5ph), got {:}".format(ph_raw))
-                    self.assertTrue(ph_raw < 10.5,msg="Raw ph should be under 0.2v (~10.5ph), got {:}".format(ph_raw))
-                    self.assertTrue(ph_avg > 3.5,msg="Average ph should be over 3.5ph, got {:}".format(ph_avg))
-                    self.assertTrue(ph_avg < 10.5,msg="Average ph should be under 10.5ph, got {:}".format(ph_avg))
+                    volume_raw = float(volume_raw)
+                    volume_avg = float(volume_avg)
+                    self.assertTrue(volume_raw > 0.,msg="Raw volume should be over 0.0, got {:}".format(volume_raw))
+                    self.assertTrue(volume_raw < 15. ,msg="Raw volume should be under 15.0, got {:}".format(volume_raw))
+                    self.assertTrue(volume_avg > 0. ,msg="Average volume should be over 0.0, got {:}".format(volume_avg))
+                    self.assertTrue(volume_avg < 15,msg="Average volume should be under 15.0, got {:}".format(volume_avg))
 
             self.assertFalse(none_counter_voltage >= len(data)-2,msg="Output file must have at least 1 non-'None' value for voltage")
             self.assertFalse(none_counter_ph >= len(data)-2,msg="Output file must have at least 1 non-'None' value for ph")
 
-
-
         finally:
             os.remove(tmp_file)
-
-        '''
-
