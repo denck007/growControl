@@ -1,0 +1,5 @@
+time,datetime_timezone,pulse_duration_raw,pulse_duration_avg,volume_raw,volume_avg
+0,_,0.001092,0.0002184,5,1
+0.3,_,0.0010615,0.000387,5.3,1.86
+0.6,_,0.0010971,0.000529,4.95,2.478
+0.8,_,0.001092,0.0006416,5,2.9824

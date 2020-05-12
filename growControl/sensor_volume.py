@@ -72,6 +72,8 @@ class Sensor_volume:
         # allow us to use a csv file instead of the sensor for debugging
         if csv is None:
             self._initialize_sr04()
+        elif (csv is None) and (self.trigger_pin is None or self.echo_pin is None):
+            raise ValueError("No trigger or echo pin was given, and no testing csv given. This means there is no valid input.")
         else: # debugging
             self._initialize_csv(csv)
         
@@ -120,11 +122,19 @@ class Sensor_volume:
         Return the next value from a csv
         This lets us test without needing the sensor hooked up
         '''
-        value = self.csv_data[self.csv_current_position]
-        if value == "None":
-            value = None
-        self.csv_current_position += 1
-        return value
+        counts = 0
+        sums = 0
+        for _ in range(self.iterations_per_reading):
+            try:
+                value = self.csv_data[self.csv_current_position]
+                self.csv_current_position += 1
+                sums += value
+                counts += 1
+            except:
+                continue
+        if counts == 0:
+            return None
+        return sums/counts
         
     def _initialize_sr04(self):
         '''
@@ -165,15 +175,18 @@ class Sensor_volume:
                     pulse_end = time.time()
 
                 value = pulse_end - pulse_start
-                counts += 1
                 sums += value
-                
+                counts += 1
+
             except:
                 e = sys.exc_info()
                 print("Exception thrown while reading SR04 Ultrasonic Distance Sensor:")
                 print("{}: {}".format(e[0],e[1]))
                 value = None
-        return sums/counts
+        if counts == 0:
+            return None
+        else:
+            return sums/counts
 
     def _load_calibration_params(self,calibration_file=None):
         '''
@@ -237,7 +250,7 @@ class Sensor_volume:
             pulse_durations.append(self._read())
 
         data = self._calibration_compute_line(volume,pulse_durations)
-        data["volume_raw"] = volume_raw
+        data["volume_raw"] = volume
         data["pulse_durations"] = pulse_durations        
 
         calibration_file = self._calibration_save_data(data)
@@ -273,21 +286,19 @@ class Sensor_volume:
             # not enough time has passed since last reading, just return
             return
 
+        # Take the reading. If None is returned, just exit now. there is no need to update any values
+        #    as nothing has changed
+        self.pulse_duration_raw = self._read()
+        
+        if self.pulse_duration_raw is None:
+            return
+        self.last_reading = current_time
         self.update_output_file_path() # Starts a new output file every day
 
-        self.pulse_duration_raw = self._read()
-        if self.pulse_duration_raw is None:
-            self.volume_raw = None
-        else:
-            self.volume_raw = self.convert_pulse_duration_to_volume(self.pulse_duration_raw)
-            self.last_reading = current_time # Only change if a valid reading
+        self.volume_raw = self.convert_pulse_duration_to_volume(self.pulse_duration_raw)
+        self.pulse_duration_avg = self.pulse_duration_avg * self.average_factor + self.pulse_duration_raw * (1-self.average_factor)
+        self.volume_avg = self.volume_avg * self.average_factor + self.volume_raw * (1-self.average_factor)
         
-        # If there was an error reading the pulse duration is none. 
-        #   In this case we do not want to update the moving average
-        if self.pulse_duration_raw is not None: 
-            self.pulse_duration_avg = self.pulse_duration_avg * self.average_factor + self.pulse_duration_raw * (1-self.average_factor)
-            self.volume_avg = self.volume_avg * self.average_factor + self.volume_raw * (1-self.average_factor)
-
         #fp.write("times,datetime_timezone,pulse_duration_raw,pulse_duration_avg,volume_raw,volume_avg\n")
         output = "{},{},".format(time.time(),datetime.datetime.now().astimezone())
         output += "{},{},{},{}\n".format(self.pulse_duration_raw,self.pulse_duration_avg,self.volume_raw,self.volume_avg)
