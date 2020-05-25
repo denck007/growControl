@@ -35,7 +35,8 @@ class test_Controllable_Pump(TestCase):
         Verifies:
             * Recorded time is correct
         '''
-        if os.uname().machine != "armv6l":
+        machine = os.uname().machine
+        if not (machine == "armv6l" or machine == "armv7l") :
             print("test_controllable_pump_real_output only works on the raspberrypi!")
             return
 

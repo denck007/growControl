@@ -75,7 +75,8 @@ class test_Sensor_humidity_temp(TestCase):
         '''
         Test that we can actually read from the sensor
         '''
-        if os.uname().machine != "armv6l":
+        machine = os.uname().machine
+        if not (machine == "armv6l" or machine == "armv7l") :
             print("test_sensor_humidity_temp_real_readings only works on the raspberrypi!")
             return
         try:

@@ -82,7 +82,8 @@ class test_Sensor_ph(TestCase):
         Verifies:
             * Recorded time is correct
         '''
-        if os.uname().machine != "armv6l":
+        machine = os.uname().machine
+        if  not (machine == "armv6l" or machine == "armv7l") :
             print("test_sensor_ph_real_readings only works on the raspberrypi!")
             return
         
