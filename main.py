@@ -8,7 +8,7 @@ Will control ph using 2 pumps
 import time
 import datetime
 import os
-from growControl import Sensor_ph, Controller_ph_Pump, Sensor_humidity_temp, Controllable_Pump
+from growControl import Sensor_ph, Controller_ph_Pump, Sensor_humidity_temp, Controllable_Pump,Sensor_volume
 
 from blessed import Terminal
 
@@ -248,6 +248,17 @@ if __name__ == "__main__":
                                                 average_factor_humidity=0.8,
                                                 verbose=verbose)
 
+    sensor_volume = Sensor_volume(output_file_path=output_dir,
+                                    output_file_base="sensor_volume",
+                                    trigger_pin=20,
+                                    echo_pin=21,
+                                    iterations_per_reading=5,
+                                    average_factor=0.99,
+                                    read_every=30.,
+                                    calibration_file=None,
+                                    calibrate_on_startup=False,
+                                    verbose=False)
+
     start_dt = datetime.datetime.now()
     start_dt_string = start_dt.strftime("%m-%d %H:%M")
 
@@ -264,6 +275,7 @@ if __name__ == "__main__":
                 sensor_ph()
                 sensor_ht_ambient()
                 sensor_ht_grow()
+                sensor_volume()
                 controller()
 
                 val = term.inkey(timeout=.5) # how often to update the screen 
@@ -319,6 +331,13 @@ if __name__ == "__main__":
                                     name="Chamber Humidity Sensor",
                                     current=sensor_ht_grow.humidity_raw,
                                     average=sensor_ht_grow.humidity_avg)
+                screen += sensor
+                sensor = sensor_box(top=top+3*rows_per_device,
+                                    left=left,
+                                    width=cols_per_device,
+                                    name="Volume Sensor",
+                                    current=sensor_volume.volume_raw,
+                                    average=sensor_volume.volume_avg)
                 screen += sensor
 
                 # Handle the titles and menu
