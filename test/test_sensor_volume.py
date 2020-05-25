@@ -92,8 +92,8 @@ class test_Sensor_volume(TestCase):
             tmp_file = tempfile.gettempdir()
             s = Sensor_volume(output_file_path=tmp_file,
                             output_file_base="sensor_volume",
-                            trigger_pin=23,
-                            echo_pin=24,
+                            trigger_pin=20,
+                            echo_pin=21,
                             iterations_per_reading=2,
                             average_factor=0.8,
                             read_every=0.001,
