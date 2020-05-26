@@ -169,11 +169,17 @@ class Sensor_volume:
                 GPIO.output(self.trigger_pin,False)
 
                 # Find the start of the response
+                error_timeout = time.time() + 0.1
                 while GPIO.input(self.echo_pin) == 0:
                     pulse_start = time.time()
+                    if pusle_start > error_timeout:
+                        raise ValueError("Timeout while searching for pulse start on volume sensor")
                 # Find the end of the response
+                error_timeout = time.time() + 0.1
                 while GPIO.input(self.echo_pin) == 1:
                     pulse_end = time.time()
+                    if pusle_end > error_timeout:
+                        raise ValueError("Timeout while searching for pulse end on volume sensor")
 
                 value = pulse_end - pulse_start
                 sums += value
