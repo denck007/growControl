@@ -253,7 +253,7 @@ if __name__ == "__main__":
                                     trigger_pin=20,
                                     echo_pin=21,
                                     iterations_per_reading=5,
-                                    average_factor=0.99,
+                                    average_factor=0.9,
                                     read_every=30.,
                                     calibration_file=None,
                                     calibrate_on_startup=False,
