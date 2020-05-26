@@ -78,14 +78,14 @@ class test_Sensor_volume(TestCase):
         finally:
             os.remove(tmp_file)
 
-    def test_sensor_ph_real_sensor(self):
+    def test_sensor_volume_real_sensor(self):
         '''
         Verifies:
             * Recorded time is correct
         '''
         machine = os.uname().machine
         if not (machine == "armv6l" or machine == "armv7l") :
-            print("test_sensor_ph_real_readings only works on the raspberrypi!")
+            print("test_sensor_volume_real_readings only works on the raspberrypi!")
             return
         
         try:
@@ -113,8 +113,7 @@ class test_Sensor_volume(TestCase):
                 header_correct = fp.readline()
             
             self.assertEqual(data[0],header_correct)
-            none_counter_voltage = 0
-            none_counter_ph = 0
+            none_counter = 0
             for line in data[1:]:
                 t, dt_tz, time_raw, time_avg, volume_raw, volume_avg = line.strip("\n").split(",")
                 if time_raw == "None":
@@ -139,8 +138,7 @@ class test_Sensor_volume(TestCase):
                     self.assertTrue(volume_avg > 0. ,msg="Average volume should be over 0.0, got {:}".format(volume_avg))
                     self.assertTrue(volume_avg < 15,msg="Average volume should be under 15.0, got {:}".format(volume_avg))
 
-            self.assertFalse(none_counter_voltage >= len(data)-2,msg="Output file must have at least 1 non-'None' value for voltage")
-            self.assertFalse(none_counter_ph >= len(data)-2,msg="Output file must have at least 1 non-'None' value for ph")
+            self.assertFalse(none_counter >= len(data)-2,msg="Output file must have at least 1 non-'None' value for voltage")
 
         finally:
             os.remove(tmp_file)
