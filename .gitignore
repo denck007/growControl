@@ -49,3 +49,5 @@ Temporary Items
 *__TEST.*
 
 tmp_output_files/*
+
+*/.ipynb_checkpoints/*
